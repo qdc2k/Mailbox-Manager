@@ -9,6 +9,7 @@
 # 1. PREREQUISITE CHECKS & ADMIN ELEVATION
 # ==============================================================================
 $appDataPath = "$env:APPDATA\Mailbox-Manager"
+$settingsFile = "$appDataPath\settings.json"
 $markerFile = "$appDataPath\ExchangeModuleOk.txt"
 
 if (-not (Test-Path $markerFile)) {
@@ -216,24 +217,32 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
     <Grid Margin="15">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
         <!-- Top Connection Bar -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
-            <Button Name="BtnConnect" Content="Connect to Exchange" Height="45" Width="150" Background="#007ACC" Foreground="White" BorderThickness="0" Cursor="Hand" FontWeight="Bold" Margin="0,0,20,0"/>
-            
-            <CheckBox Name="ChkDelegated" Content="Use Delegated Authentication:" VerticalAlignment="Center" Foreground="#E0E0E0" Margin="0,0,5,0"/>
-            <TextBox Name="TxtDelegatedOrg" Width="100" Height="25" Background="#2D2D30" Foreground="White" BorderBrush="#3F3F46" VerticalContentAlignment="Center" Padding="5,0" IsEnabled="False" Margin="0,0,5,0"/>
-            <TextBlock Text="(z.B. zkj.ch)" VerticalAlignment="Center" Foreground="#CCCCCC" FontStyle="Italic"/>
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
+            <Button Name="BtnConnect" Content="Connect to Exchange" Width="140" Background="#007ACC" Foreground="White" BorderThickness="0" Cursor="Hand" FontWeight="Bold" Margin="0,0,15,0"/>
+
+            <Border BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="3" Padding="10,5,10,8">
+                <StackPanel>
+                    <TextBlock Text="Optional Connection Settings" Foreground="#007ACC" FontWeight="Bold" FontSize="11" Margin="0,0,0,8"/>
+                    <StackPanel Orientation="Horizontal">
+                        <CheckBox Name="ChkDelegated" Content="Delegated Organization:" VerticalAlignment="Center" Foreground="#E0E0E0" Margin="0,0,5,0"/>
+                        <TextBox Name="TxtDelegatedOrg" Width="100" Height="25" Background="#2D2D30" Foreground="White" BorderBrush="#3F3F46" VerticalContentAlignment="Center" Padding="5,0" IsEnabled="False" Margin="0,0,15,0" ToolTip="e.g. contoso.onmicrosoft.com"/>
+                        
+                        <!-- Vertical Separator -->
+                        <Rectangle Width="1" Fill="#3F3F46" Margin="0,2,15,2" VerticalAlignment="Stretch"/>
+
+                        <TextBlock Text="Admin-User:" VerticalAlignment="Center" Foreground="#E0E0E0" Margin="0,0,5,0"/>
+                        <TextBox Name="TxtUserUPN" Width="180" Height="25" Background="#2D2D30" Foreground="White" BorderBrush="#3F3F46" VerticalContentAlignment="Center" Padding="5,0" Margin="0,0,5,0" ToolTip="Your admin email address"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
         </StackPanel>
 
-        <!-- Row 1 left empty as requested -->
-        <Grid Grid.Row="1" Height="25" Margin="0,0,0,15"/>
-
         <!-- Main Content Area -->
-        <Grid Grid.Row="2">
+        <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="285" MinWidth="150"/>
                 <ColumnDefinition Width="5"/>
@@ -332,8 +341,9 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                         <ListView Name="GridMbxPerms" Grid.Row="1" Background="Transparent" Foreground="#E0E0E0" BorderThickness="0" Margin="5,0,5,5" SelectionMode="Single">
                             <ListView.View>
                                 <GridView>
-                                    <GridViewColumn Header="User (UPN)" Width="250" DisplayMemberBinding="{Binding User}"/>
-                                    <GridViewColumn Header="Access Rights" Width="200" DisplayMemberBinding="{Binding AccessRights}"/>
+                                    <GridViewColumn Header="User (UPN)" Width="230" DisplayMemberBinding="{Binding User}"/>
+                                    <GridViewColumn Header="Access Rights" Width="150" DisplayMemberBinding="{Binding AccessRights}"/>
+                                    <GridViewColumn Header="Send Permissions" Width="120" DisplayMemberBinding="{Binding SendRights}"/>
                                 </GridView>
                             </ListView.View>
                         </ListView>
@@ -341,7 +351,7 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                 </Border>
 
                 <!-- Calendar Permissions -->
-                <Border Grid.Row="1" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="3" Margin="0,0,0,10">
+                <Border Grid.Row="1" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="3">
                     <Grid Background="#252526">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
@@ -392,6 +402,7 @@ $Window = [Windows.Markup.XamlReader]::Load($reader)
 $BtnConnect = $Window.FindName("BtnConnect")
 $ChkDelegated = $Window.FindName("ChkDelegated")
 $TxtDelegatedOrg = $Window.FindName("TxtDelegatedOrg")
+$TxtUserUPN = $Window.FindName("TxtUserUPN")
 $ListMailboxes = $Window.FindName("ListMailboxes")
 $TxtSearchMailbox = $Window.FindName("TxtSearchMailbox")
 $BtnClearSearch = $Window.FindName("BtnClearSearch")
@@ -407,6 +418,16 @@ $StatusMbx = $Window.FindName("StatusMbx")
 $StatusCal = $Window.FindName("StatusCal")
 $StatusMailboxes = $Window.FindName("StatusMailboxes")
 
+# --- Helper: Save Settings ---
+function Save-ManagerSettings {
+    $settings = @{
+        UseDelegated = [bool]$ChkDelegated.IsChecked
+        Org          = $TxtDelegatedOrg.Text
+        UserUPN      = $TxtUserUPN.Text
+    }
+    $settings | ConvertTo-Json | Set-Content $settingsFile -ErrorAction SilentlyContinue
+}
+
 # Create a synchronized hashtable to share data between GUI and Runspaces
 $SyncHash = [hashtable]::Synchronized(@{})
 $SyncHash.Window = $Window
@@ -420,6 +441,20 @@ $SyncHash.StatusMailboxes = $StatusMailboxes
 $SyncHash.GridMbxPerms = $GridMbxPerms
 $SyncHash.GridCalPerms = $GridCalPerms
 $SyncHash.AllMailboxes = [System.Collections.ObjectModel.ObservableCollection[object]]::new()
+
+# --- Load Saved Settings ---
+if (Test-Path $settingsFile) {
+    try {
+        $settings = Get-Content $settingsFile | ConvertFrom-Json
+        $ChkDelegated.IsChecked = $settings.UseDelegated
+        $TxtDelegatedOrg.Text = $settings.Org
+        $TxtUserUPN.Text = $settings.UserUPN
+        if ($settings.UseDelegated) { $TxtDelegatedOrg.IsEnabled = $true }
+    }
+    catch {
+        Write-Host "Failed to load settings: $($_.Exception.Message)" -ForegroundColor Red
+    }
+}
 
 # Initialize Grouping and Sorting on the UI Thread (Setup once)
 $view = [System.Windows.Data.CollectionViewSource]::GetDefaultView($SyncHash.AllMailboxes)
@@ -446,16 +481,21 @@ function Show-PermissionDialog {
         [string]$CurrentOption = "",
         [string]$CurrentAutomapping = "", # New parameter for Automapping
         [bool]$ShowAutomapping = $true,
+        [bool]$ShowSendRights = $false,
+        [string]$CurrentSendRights = "None",
         [bool]$UserEditable = $true,
         [string]$Label = "Access Rights / Role:" # Label for the main access dropdown
     )
 
-    $winHeight = if ($ShowAutomapping) { 310 } else { 235 }
+    $winHeight = 235
+    if ($ShowAutomapping) { $winHeight += 65 }
+    if ($ShowSendRights) { $winHeight += 85 } # Extra height for separation
     $autoVisibility = if ($ShowAutomapping) { "Visible" } else { "Collapsed" }
-    $rightsMargin = if ($ShowAutomapping) { "0,0,0,10" } else { "0,0,0,20" }
+    $sendVisibility = if ($ShowSendRights) { "Visible" } else { "Collapsed" }
+    $rightsMargin = "0,0,0,15"
 
     [xml]$DialogXaml = @"
-    <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Title="$Title" Height="$winHeight" Width="270" Background="#1E1E1E" Foreground="White" WindowStartupLocation="CenterOwner" ResizeMode="NoResize">
+    <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Title="$Title" Height="$winHeight" Width="280" Background="#1E1E1E" Foreground="White" WindowStartupLocation="CenterOwner" ResizeMode="NoResize">
         <Window.Resources>
             <Style TargetType="ComboBox">
                 <Setter Property="Background" Value="#2D2D30"/>
@@ -530,20 +570,28 @@ function Show-PermissionDialog {
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
             <TextBlock Text="User Principal Name (UPN):" FontWeight="Bold" Margin="0,0,0,5"/>
             <TextBox Name="TxtUser" Grid.Row="1" Height="25" Background="#2D2D30" Foreground="White" BorderBrush="#3F3F46" VerticalContentAlignment="Center" Margin="0,0,0,15"/>
 
             <TextBlock Text="$Label" FontWeight="Bold" Grid.Row="2" Margin="0,0,0,5"/>
             <ComboBox Name="CmbRights" Grid.Row="3" Height="25" Margin="$rightsMargin"/>
-            
+
             <TextBlock Visibility="$autoVisibility" Text="Automapping Options:" FontWeight="Bold" Grid.Row="4" Margin="0,0,0,5"/>
-            <StackPanel Visibility="$autoVisibility" Grid.Row="5" Orientation="Horizontal" Margin="0,0,0,20">
+            <StackPanel Visibility="$autoVisibility" Grid.Row="5" Orientation="Horizontal" Margin="0,0,0,15">
                 <CheckBox Name="ChkEnableAuto" Content="Enable" Foreground="#E0E0E0" Margin="0,0,25,0" Cursor="Hand"/>
                 <CheckBox Name="ChkDisableAuto" Content="Disable" Foreground="#E0E0E0" Cursor="Hand"/>
             </StackPanel>
+            
+            <Separator Visibility="$sendVisibility" Grid.Row="6" Background="#3F3F46" Margin="0,5,0,15"/>
 
-            <Grid Grid.Row="6">
+            <TextBlock Visibility="$sendVisibility" Text="Send Permissions:" FontWeight="Bold" Grid.Row="7" Margin="0,0,0,5"/>
+            <ComboBox Name="CmbSendRights" Visibility="$sendVisibility" Grid.Row="8" Height="25" Margin="0,0,0,20"/>
+
+            <Grid Grid.Row="9">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="10"/>
@@ -567,6 +615,7 @@ function Show-PermissionDialog {
 
     $tUser = $diag.FindName("TxtUser")
     $cRights = $diag.FindName("CmbRights")
+    $cSendRights = $diag.FindName("CmbSendRights")
     $bSave = $diag.FindName("BtnSave")
     $chkEnable = $diag.FindName("ChkEnableAuto")
     $chkDisable = $diag.FindName("ChkDisableAuto")
@@ -577,6 +626,27 @@ function Show-PermissionDialog {
     $Options | ForEach-Object { $null = $cRights.Items.Add($_) }
     $cRights.SelectedItem = $CurrentOption
 
+    $initialRights = $CurrentOption
+    $initialSendRights = $CurrentSendRights
+
+    # Dynamically enable/disable Automapping UI based on selected Access Rights
+    $updateAutoUI = {
+        if ($ShowAutomapping) {
+            $isNone = ($cRights.SelectedItem -eq "None" -or [string]::IsNullOrWhiteSpace($cRights.SelectedItem))
+            $chkEnable.IsEnabled = -not $isNone
+            $chkDisable.IsEnabled = -not $isNone
+            if ($isNone) { $chkEnable.IsChecked = $false; $chkDisable.IsChecked = $false }
+        }
+    }
+    $cRights.Add_SelectionChanged($updateAutoUI)
+    & $updateAutoUI # Set initial state
+
+    if ($ShowSendRights) {
+        $sendOpts = @("None", "SendAs", "SendOnBehalf")
+        $sendOpts | ForEach-Object { $null = $cSendRights.Items.Add($_) }
+        $cSendRights.SelectedItem = $CurrentSendRights
+    }
+
     # Mutual exclusivity for checkboxes
     $chkEnable.Add_Checked({ $chkDisable.IsChecked = $false })
     $chkDisable.Add_Checked({ $chkEnable.IsChecked = $false })
@@ -585,20 +655,35 @@ function Show-PermissionDialog {
     if ($CurrentAutomapping -eq "True") { $chkEnable.IsChecked = $true }
     elseif ($CurrentAutomapping -eq "False") { $chkDisable.IsChecked = $true }
 
-    $result = $null
+    $script:DiagResult = $null
     $bSave.Add_Click({
             $upn = $tUser.Text.Trim()
             # Validation: Allow Default, Anonymous, or valid email format
             if ($upn -eq "Default" -or $upn -eq "Anonymous" -or $upn -match '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$') {
                 if ($cRights.SelectedItem) {
-                    if ($ShowAutomapping -and -not ($chkEnable.IsChecked -or $chkDisable.IsChecked)) {
-                        [System.Windows.MessageBox]::Show("Please select an Automapping option (Enable or Disable).")
-                        return
+                    $selectedRights = $cRights.SelectedItem
+                    $selectedSend = if ($ShowSendRights) { $cSendRights.SelectedItem } else { "None" }
+                    $isNone = ($selectedRights -eq "None")
+                    $rightsChanged = ($selectedRights -ne $initialRights)
+                    $autoSelected = ($chkEnable.IsChecked -or $chkDisable.IsChecked)
+
+                    # Mandatory Automapping only if Access Rights changed from None (or initial empty) to something else,
+                    # OR if they were explicitly changed during an edit.
+                    if ($ShowAutomapping -and -not $isNone) {
+                        if ($rightsChanged -and -not $autoSelected) {
+                            [System.Windows.MessageBox]::Show("Access Rights were changed. Please select an Automapping option.")
+                            return
+                        }
                     }
+
                     $script:DiagResult = @{ 
-                        User        = $upn; 
-                        Rights      = $cRights.SelectedItem; 
-                        Automapping = if ($ShowAutomapping) { [bool]$chkEnable.IsChecked } else { $true } 
+                        User              = $upn; 
+                        Rights            = $selectedRights;
+                        RightsChanged     = $rightsChanged;
+                        SendRights        = $selectedSend;
+                        SendRightsChanged = ($selectedSend -ne $initialSendRights);
+                        Automapping       = [bool]$chkEnable.IsChecked;
+                        HasAutoSelection  = $autoSelected
                     }
                     $diag.Close()
                 }
@@ -682,22 +767,58 @@ $SyncHash.GetPermissionsAsync = {
             
             try {
                 if ($doMbx) {
-                    Write-Host "[$(Get-Date -f HH:mm:ss)] DEBUG: Fetching mailbox permissions for $mbx..." -ForegroundColor Gray
+                    Write-Host "[$(Get-Date -f HH:mm:ss)] DEBUG: Fetching mailbox & send permissions for $mbx..." -ForegroundColor Gray
                     $mbxPerms = Get-EXOMailboxPermission -Identity $mbx | Where-Object { ($_.User -match "SELF" -or $_.User -notlike "NT AUTHORITY\*") -and ($_.IsInherited -eq $false) }
-                    $mCount = @($mbxPerms).Count
-                    
-                    $SyncHash.Window.Dispatcher.Invoke([Action[string, object, int]] {
-                            param($targetMbx, $perms, $count)
-                            if ($SyncHash.CurrentTargetMbx -ne $targetMbx) { return }
-                            Write-Host "[$(Get-Date -f HH:mm:ss)] Loaded $count mailbox permissions." -ForegroundColor Gray
-                            foreach ($p in $perms) {
-                                $uStr = $p.User.ToString()
-                                $userDisp = if ($uStr -match "SELF") { $targetMbx } else { $uStr.Split(':')[-1] }
+                    $recPerms = Get-EXORecipientPermission -Identity $mbx | Where-Object { $_.Trustee -match "SELF" -or $_.Trustee -notlike "NT AUTHORITY\*" }
+                    $mbxObj = Get-EXOMailbox -Identity $mbx -Properties GrantSendOnBehalfTo
 
-                                $SyncHash.GridMbxPerms.Items.Add([PSCustomObject]@{User = $userDisp; AccessRights = ($p.AccessRights -join ', ') }) | Out-Null
+                    $usersHash = [ordered]@{}
+                    
+                    foreach ($p in $mbxPerms) {
+                        $uStr = $p.User.ToString()
+                        $userDisp = if ($uStr -match "SELF") { $mbx } else { $uStr.Split(':')[-1] }
+                        if (-not $usersHash.Contains($userDisp)) {
+                            $usersHash[$userDisp] = @{ User = $userDisp; AccessRights = [System.Collections.Generic.List[string]]::new(); SendRights = "None" }
+                        }
+                        $p.AccessRights | ForEach-Object { $usersHash[$userDisp].AccessRights.Add($_) }
+                    }
+                    
+                    foreach ($p in $recPerms) {
+                        $tStr = $p.Trustee.ToString()
+                        $userDisp = if ($tStr -match "SELF") { $mbx } else { $tStr.Split(':')[-1] }
+                        if (-not $usersHash.Contains($userDisp)) {
+                            $usersHash[$userDisp] = @{ User = $userDisp; AccessRights = [System.Collections.Generic.List[string]]::new(); SendRights = "SendAs" }
+                        }
+                        else {
+                            $usersHash[$userDisp].SendRights = "SendAs"
+                        }
+                    }
+                    
+                    foreach ($u in $mbxObj.GrantSendOnBehalfTo) {
+                        $uStr = $u.ToString()
+                        $userDisp = if ($uStr -match "SELF") { $mbx } else { $uStr.Split(':')[-1] }
+                        if (-not $usersHash.Contains($userDisp)) {
+                            $usersHash[$userDisp] = @{ User = $userDisp; AccessRights = [System.Collections.Generic.List[string]]::new(); SendRights = "SendOnBehalf" }
+                        }
+                        else {
+                            $usersHash[$userDisp].SendRights = "SendOnBehalf"
+                        }
+                    }
+
+                    $mCount = $usersHash.Count
+                    $SyncHash.Window.Dispatcher.Invoke([Action[object, int, string]] {
+                            param($hash, $count, $targetMbx)
+                            if ($SyncHash.CurrentTargetMbx -ne $targetMbx) { return }
+                            Write-Host "[$(Get-Date -f HH:mm:ss)] Loaded $count users with mailbox/send permissions." -ForegroundColor Gray
+                            foreach ($entry in $hash.Values) {
+                                $rightsStr = ($entry.AccessRights | Select-Object -Unique | Sort-Object) -join ", "
+                                if (-not $rightsStr) { $rightsStr = "None" }
+                                $SyncHash.GridMbxPerms.Items.Add([PSCustomObject]@{
+                                        User = $entry.User; AccessRights = $rightsStr; SendRights = $entry.SendRights
+                                    }) | Out-Null
                             }
                             $SyncHash.StatusMbx.Text = ""
-                        }, $mbx, $mbxPerms, $mCount)
+                        }, $usersHash, $mCount, $mbx)
                 }
 
                 if ($doCal) {
@@ -765,7 +886,7 @@ $SyncHash.GetPermissionsAsync = {
 }
 
 function Update-PermissionAsync {
-    param([string]$Type, [string]$Action, [hashtable]$Data, [string]$OldRights = "")
+    param([string]$Type, [string]$Action, [hashtable]$Data, [string]$OldRights = "", [string]$OldSendRights = "None")
     
     $mbx = $SyncHash.SelectedMbx
     if (-not $mbx) { return }
@@ -774,19 +895,41 @@ function Update-PermissionAsync {
     if ($Type -eq "Mailbox") { $SyncHash.StatusMbx.Text = "(Saving...)" } else { $SyncHash.StatusCal.Text = "(Saving...)" }
 
     $PowerShell = [powershell]::Create().AddScript({
-            param($mbx, $type, $action, $data, $SyncHash, $oldRights)
+            param($mbx, $type, $action, $data, $SyncHash, $oldRights, $oldSendRights)
             Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
             
             try {
                 if ($type -eq "Mailbox") {
-                    if ($action -eq "Add") {
-                        Add-MailboxPermission -Identity $mbx -User $data.User -AccessRights @($data.Rights) -InheritanceType All -AutoMapping $data.Automapping -ErrorAction Stop
+                    # 1. Handle Send Rights (Only if changed or new)
+                    if ($data.SendRightsChanged -or $action -eq "Add") {
+                        if ($action -eq "Edit") {
+                            if ($oldSendRights -eq "SendAs") { 
+                                Remove-RecipientPermission -Identity $mbx -Trustee $data.User -AccessRights SendAs -Confirm:$false -ErrorAction SilentlyContinue 
+                            }
+                            if ($oldSendRights -eq "SendOnBehalf") { 
+                                Set-Mailbox -Identity $mbx -GrantSendOnBehalfTo @{Remove = $data.User } -ErrorAction SilentlyContinue 
+                            }
+                        }
+                        
+                        if ($data.SendRights -eq "SendAs") {
+                            Add-RecipientPermission -Identity $mbx -Trustee $data.User -AccessRights SendAs -Confirm:$false -ErrorAction Stop
+                        }
+                        elseif ($data.SendRights -eq "SendOnBehalf") {
+                            Set-Mailbox -Identity $mbx -GrantSendOnBehalfTo @{Add = $data.User } -ErrorAction Stop
+                        }
                     }
-                    else {
-                        # Action is "Edit"
-                        # For Mailbox permissions, we remove the old set and add the new one
-                        Remove-MailboxPermission -Identity $mbx -User $data.User -AccessRights ($oldRights -split ',' | ForEach-Object { $_.Trim() }) -InheritanceType All -Confirm:$false -ErrorAction Stop
-                        Add-MailboxPermission -Identity $mbx -User $data.User -AccessRights @($data.Rights) -InheritanceType All -AutoMapping $data.Automapping -ErrorAction Stop
+
+                    # 2. Handle Access Rights (Only if changed or Automapping explicitly set)
+                    if ($data.RightsChanged -or $data.HasAutoSelection -or $action -eq "Add") {
+                        if ($action -eq "Edit" -and $oldRights -and $oldRights -ne "None") {
+                            Remove-MailboxPermission -Identity $mbx -User $data.User -AccessRights ($oldRights -split ',' | ForEach-Object { $_.Trim() }) -InheritanceType All -Confirm:$false -ErrorAction Stop
+                        }
+                        
+                        if ($data.Rights -and $data.Rights -ne "None") {
+                            # Use provided selection, otherwise default to True for new assignments
+                            $autoVal = if ($data.HasAutoSelection) { $data.Automapping } else { $true }
+                            Add-MailboxPermission -Identity $mbx -User $data.User -AccessRights @($data.Rights) -InheritanceType All -AutoMapping $autoVal -ErrorAction Stop
+                        }
                     }
                 }
                 else {
@@ -842,7 +985,7 @@ function Update-PermissionAsync {
                         })
                 }
             }
-        }).AddArgument($mbx).AddArgument($Type).AddArgument($Action).AddArgument($Data).AddArgument($SyncHash).AddArgument($OldRights)
+        }).AddArgument($mbx).AddArgument($Type).AddArgument($Action).AddArgument($Data).AddArgument($SyncHash).AddArgument($OldRights).AddArgument($OldSendRights)
 
     $PowerShell.RunspacePool = $Pool
     $PowerShell.BeginInvoke() | Out-Null # No callback needed, UI updates are handled internally
@@ -866,10 +1009,13 @@ function Remove-PermissionAsync {
             
             try {
                 if ($type -eq "Mailbox") {
-                    # Remove-MailboxPermission requires specific access rights to be removed.
-                    # If the displayed AccessRights is a comma-separated string, pass it as an array.
-                    $rightsToRemove = $accessRights -split ',' | ForEach-Object { $_.Trim() }
-                    Remove-MailboxPermission -Identity $mbx -User $user -AccessRights $rightsToRemove -InheritanceType All -Confirm:$false -ErrorAction Stop
+                    Remove-RecipientPermission -Identity $mbx -Trustee $user -AccessRights SendAs -Confirm:$false -ErrorAction SilentlyContinue
+                    Set-Mailbox -Identity $mbx -GrantSendOnBehalfTo @{Remove = $user } -ErrorAction SilentlyContinue
+
+                    if ($accessRights -and $accessRights -ne "None") {
+                        $rightsToRemove = $accessRights -split ',' | ForEach-Object { $_.Trim() }
+                        Remove-MailboxPermission -Identity $mbx -User $user -AccessRights $rightsToRemove -InheritanceType All -Confirm:$false -ErrorAction Stop
+                    }
                 }
                 else {
                     # Calendar
@@ -925,12 +1071,12 @@ function Remove-PermissionAsync {
 }
 
 # --- Permission Button Events ---
-$mailboxRights = @("ChangeOwner", "ChangePermission", "DeleteItem", "ExternalAccount", "FullAccess", "ReadPermission") | Sort-Object
+$mailboxRights = @("None", "ChangeOwner", "ChangePermission", "DeleteItem", "ExternalAccount", "FullAccess", "ReadPermission") | Sort-Object
 $calendarRoles = @("None", "AvailabilityOnly", "LimitedDetails", "Author", "Contributor", "Editor", "NonEditingAuthor", "Owner", "PublishingAuthor", "PublishingEditor", "Reviewer") | Sort-Object
 
 $BtnAddMbx.Add_Click({
         Write-Host "[$(Get-Date -f HH:mm:ss)] BtnAddMbx clicked." -ForegroundColor Magenta
-        $res = Show-PermissionDialog -Title "Add Mailbox Permission" -Options $mailboxRights -Label "Access Rights:"
+        $res = Show-PermissionDialog -Title "Add Mailbox Permission" -Options $mailboxRights -Label "Access Rights:" -ShowSendRights $true
         if ($res) { Update-PermissionAsync -Type "Mailbox" -Action "Add" -Data $res } else { Write-Host "[$(Get-Date -f HH:mm:ss)] Show-PermissionDialog for AddMbx returned null." -ForegroundColor Yellow }
     })
 
@@ -940,8 +1086,8 @@ $BtnEditMbx.Add_Click({
         if (-not $sel) { [System.Windows.MessageBox]::Show("Please select a user from the list."); return }
         # Extract the first access right for display in the dropdown
         $currentRight = ($sel.AccessRights -split "," | Select-Object -First 1 | ForEach-Object { $_.Trim() })
-        $res = Show-PermissionDialog -Title "Edit Mailbox Permission" -User $sel.User -Options $mailboxRights -CurrentOption $currentRight -CurrentAutomapping "" -UserEditable $false -Label "Access Rights:"
-        if ($res) { Update-PermissionAsync -Type "Mailbox" -Action "Edit" -Data $res -OldRights $sel.AccessRights } else { Write-Host "[$(Get-Date -f HH:mm:ss)] Show-PermissionDialog for EditMbx returned null." -ForegroundColor Yellow }
+        $res = Show-PermissionDialog -Title "Edit Mailbox Permission" -User $sel.User -Options $mailboxRights -CurrentOption $currentRight -CurrentAutomapping "" -UserEditable $false -Label "Access Rights:" -ShowSendRights $true -CurrentSendRights $sel.SendRights
+        if ($res) { Update-PermissionAsync -Type "Mailbox" -Action "Edit" -Data $res -OldRights $sel.AccessRights -OldSendRights $sel.SendRights } else { Write-Host "[$(Get-Date -f HH:mm:ss)] Show-PermissionDialog for EditMbx returned null." -ForegroundColor Yellow }
     })
 
 $BtnRemoveMbx.Add_Click({
@@ -978,11 +1124,11 @@ $BtnRemoveCal.Add_Click({
         }
     })
 
-# --- Event: Checkbox Toggle ---
-$ChkDelegated.Add_Checked({
-        $TxtDelegatedOrg.IsEnabled = $true
-    })
-$ChkDelegated.Add_Unchecked({ $TxtDelegatedOrg.IsEnabled = $false })
+# --- Event: Connectivity & Persistence Hooks ---
+$ChkDelegated.Add_Checked({ $TxtDelegatedOrg.IsEnabled = $true; Save-ManagerSettings })
+$ChkDelegated.Add_Unchecked({ $TxtDelegatedOrg.IsEnabled = $false; Save-ManagerSettings })
+$TxtDelegatedOrg.Add_TextChanged({ Save-ManagerSettings })
+$TxtUserUPN.Add_TextChanged({ Save-ManagerSettings })
 
 # --- Event: Connect & Fetch Mailboxes (ASYNC) ---
 $BtnConnect.Add_Click({
@@ -1007,24 +1153,28 @@ $BtnConnect.Add_Click({
 
         $Delegated = $ChkDelegated.IsChecked
         $Org = $TxtDelegatedOrg.Text
+        $UserUPN = $TxtUserUPN.Text
         Write-Host "[$(Get-Date -f HH:mm:ss)] Attempting to connect to Exchange (Delegated: $Delegated)..." -ForegroundColor Cyan
+
+        Save-ManagerSettings
 
         # Store connection info in SyncHash for background runspaces to reuse
         $SyncHash.ConnectDelegated = $Delegated
         $SyncHash.ConnectOrg = $Org
+        $SyncHash.TargetUPN = $UserUPN
 
         $PowerShell = [powershell]::Create().AddScript({
                 $Delegated = $args[0]
                 $Org = $args[1]
+                $UserUPN = $args[2]
                 Import-Module ExchangeOnlineManagement
         
                 try {
-                    if ($Delegated -and $Org) {
-                        Connect-ExchangeOnline -DelegatedOrganization $Org -ShowProgress $false -ErrorAction Stop
-                    }
-                    else {
-                        Connect-ExchangeOnline -ShowProgress $false -ErrorAction Stop
-                    }
+                    $connParams = @{ ShowProgress = $false; ErrorAction = "Stop" }
+                    if ($Delegated -and $Org) { $connParams["DelegatedOrganization"] = $Org }
+                    if (-not [string]::IsNullOrWhiteSpace($UserUPN)) { $connParams["UserPrincipalName"] = $UserUPN }
+
+                    Connect-ExchangeOnline @connParams
 
                     $SyncHash.Window.Dispatcher.Invoke({ Write-Host "[$(Get-Date -f HH:mm:ss)] Connected. Fetching all mailboxes..." -ForegroundColor Green })
 
@@ -1036,7 +1186,7 @@ $BtnConnect.Add_Click({
                     # Update UI to Connected
                     $SyncHash.Window.Dispatcher.Invoke({
                             # Create multi-line content for the button
-                            $sp = New-Object System.Windows.Controls.StackPanel
+                            $sp = New-Object System.Windows.Controls.StackPanel -Property @{ VerticalAlignment = "Center" }
                             $txt1 = New-Object System.Windows.Controls.TextBlock -Property @{
                                 Text = "Connected"; FontWeight = "Bold"; HorizontalAlignment = "Center"
                             }
@@ -1113,7 +1263,7 @@ $BtnConnect.Add_Click({
                             $SyncHash.StatusMailboxes.Text = "(Error)"
                         })
                 }
-            }).AddArgument($Delegated).AddArgument($Org)
+            }).AddArgument($Delegated).AddArgument($Org).AddArgument($UserUPN)
 
         $PowerShell.RunspacePool = $Pool
         $AsyncResult = $PowerShell.BeginInvoke()
