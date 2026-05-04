@@ -43,13 +43,15 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
 [xml]$XAML = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Exchange Mailbox Manager" Height="800" Width="1450" 
+        Title="Exchange Mailbox Manager" Height="800" Width="1000" 
         Background="#1E1E1E" Foreground="#E0E0E0" WindowStartupLocation="CenterScreen">
     <Window.Resources>
         <!-- Tooltip for Calendar Roles -->
         <ToolTip x:Key="CalendarRolesTooltip" Background="#2D2D30" Foreground="#E0E0E0" BorderBrush="#3F3F46">
             <StackPanel Margin="5">
-                <TextBlock FontWeight="Bold" Margin="0,0,0,5">Calendar Access Rights:</TextBlock>
+                <TextBlock FontWeight="Bold" Margin="0,0,0,5">Calendar Access Roles:</TextBlock>
+                <TextBlock>• AvailabilityOnly: Free/Busy time</TextBlock>
+                <TextBlock>• LimitedDetails: Free/Busy time, subject, location</TextBlock>
                 <TextBlock>• Author: CreateItems, DeleteOwned, EditOwned, Read, Visible</TextBlock>
                 <TextBlock>• Contributor: CreateItems, Visible</TextBlock>
                 <TextBlock>• Editor: CreateItems, DeleteAll, EditAll, Read, Visible</TextBlock>
@@ -63,10 +65,28 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
 
         <!-- Modern Business Styles -->
         <Style TargetType="ListViewItem">
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontSize" Value="13"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="FontFamily" Value="Segoe UI"/>
             <Setter Property="Padding" Value="2"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListViewItem">
+                        <Border Name="Border" Padding="{TemplateBinding Padding}" Background="Transparent" SnapsToDevicePixels="True">
+                            <GridViewRowPresenter VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#3E3E42"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#007ACC"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <Style TargetType="{x:Type GridViewColumnHeader}">
@@ -76,9 +96,97 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
             <Setter Property="BorderThickness" Value="0,0,0,1"/>
             <Setter Property="Padding" Value="5,2"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontSize" Value="13"/>
             <Setter Property="FontFamily" Value="Segoe UI"/>
             <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        </Style>
+
+        <!-- Custom ScrollViewer Style for Dark Theme -->
+        <Style TargetType="{x:Type ScrollViewer}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ScrollViewer}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <ScrollContentPresenter Grid.Column="0" Grid.Row="0" CanContentScroll="{TemplateBinding CanContentScroll}" CanHorizontallyScroll="False" CanVerticallyScroll="False"/>
+                            <ScrollBar Name="PART_VerticalScrollBar" Grid.Column="1" Grid.Row="0"
+                                       Value="{TemplateBinding VerticalOffset}"
+                                       Maximum="{TemplateBinding ScrollableHeight}"
+                                       ViewportSize="{TemplateBinding ViewportHeight}"
+                                       Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}"
+                                       Background="#2D2D30">
+                                <ScrollBar.Template>
+                                    <ControlTemplate TargetType="{x:Type ScrollBar}">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="*"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+                                            <RepeatButton Grid.Row="0" Command="{x:Static ScrollBar.LineUpCommand}" Background="#3E3E42" BorderThickness="0" Width="17" Height="17">
+                                                <Path Fill="White" Data="M 0 4 L 8 4 L 4 0 Z"/>
+                                            </RepeatButton>
+                                            <Track Name="PART_Track" Grid.Row="1" IsDirectionReversed="true" Background="#2D2D30">
+                                                <Track.DecreaseRepeatButton>
+                                                    <RepeatButton Command="{x:Static ScrollBar.PageUpCommand}" Opacity="0" />
+                                                </Track.DecreaseRepeatButton>
+                                                <Track.Thumb>
+                                                    <Thumb Background="#555555" BorderBrush="#3F3F46" BorderThickness="0" Width="17">
+                                                        <Thumb.Template>
+                                                            <ControlTemplate TargetType="{x:Type Thumb}">
+                                                                <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="2"/>
+                                                                <ControlTemplate.Triggers>
+                                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                                        <Setter Property="Background" Value="#777777"/>
+                                                                    </Trigger>
+                                                                    <Trigger Property="IsDragging" Value="True">
+                                                                        <Setter Property="Background" Value="#007ACC"/>
+                                                                    </Trigger>
+                                                                </ControlTemplate.Triggers>
+                                                            </ControlTemplate>
+                                                        </Thumb.Template>
+                                                    </Thumb>
+                                                </Track.Thumb>
+                                                <Track.IncreaseRepeatButton>
+                                                    <RepeatButton Command="{x:Static ScrollBar.PageDownCommand}" Opacity="0" />
+                                                </Track.IncreaseRepeatButton>
+                                            </Track>
+                                            <RepeatButton Grid.Row="2" Command="{x:Static ScrollBar.LineDownCommand}" Background="#3E3E42" BorderThickness="0" Width="17" Height="17">
+                                                <Path Fill="White" Data="M 0 0 L 4 4 L 8 0 Z"/>
+                                            </RepeatButton>
+                                        </Grid>
+                                    </ControlTemplate>
+                                </ScrollBar.Template>
+                            </ScrollBar>
+                            <ScrollBar Name="PART_HorizontalScrollBar" Grid.Column="0" Grid.Row="1"
+                                       Orientation="Horizontal"
+                                       Value="{TemplateBinding HorizontalOffset}"
+                                       Maximum="{TemplateBinding ScrollableWidth}"
+                                       ViewportSize="{TemplateBinding ViewportWidth}"
+                                       Visibility="{TemplateBinding ComputedHorizontalScrollBarVisibility}"
+                                       Background="#2D2D30">
+                                <ScrollBar.Template>
+                                    <ControlTemplate TargetType="{x:Type ScrollBar}">
+                                        <Grid>
+                                            <!-- Horizontal scrollbar template (similar to vertical, but rotated) -->
+                                            <!-- For brevity, this is a placeholder. A full implementation would mirror the vertical scrollbar's structure. -->
+                                            <Border Background="#2D2D30" />
+                                            <Thumb Background="#555555" />
+                                        </Grid>
+                                    </ControlTemplate>
+                                </ScrollBar.Template>
+                            </ScrollBar>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </Window.Resources>
 
@@ -98,19 +206,12 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
             <TextBlock Text="(z.B. zkj.ch)" VerticalAlignment="Center" Foreground="#CCCCCC" FontStyle="Italic"/>
         </StackPanel>
 
-        <!-- Search Bar for Mailboxes -->
-        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,15">
-            <TextBlock Text="Search Mailboxes:" VerticalAlignment="Center" Foreground="#E0E0E0" Margin="0,0,10,0"/>
-            <TextBox Name="TxtSearchMailbox" Width="300" Height="25" Background="#2D2D30" Foreground="White" BorderBrush="#3F3F46" VerticalContentAlignment="Center" Padding="5,0" ToolTip="Search by Address or Type"/>
-            <Button Name="BtnClearSearch" Content="Clear" Height="25" Padding="10,0" Background="#555555" Foreground="White" BorderThickness="0" Margin="10,0,0,0"/>
-        </StackPanel>
-
         <!-- Main Content Area -->
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="335"/>
-                <ColumnDefinition Width="15"/>
-                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="360" MinWidth="150"/>
+                <ColumnDefinition Width="5"/>
+                <ColumnDefinition Width="*" MinWidth="400"/>
             </Grid.ColumnDefinitions>
 
             <!-- Left: Mailbox List -->
@@ -118,10 +219,35 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                 <Grid Background="#252526">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <TextBlock Text="Mailboxes" FontWeight="Bold" Margin="10" Foreground="#007ACC" FontSize="14"/>
-                    <ListView Name="ListMailboxes" Grid.Row="1" Background="Transparent" BorderThickness="0" Margin="5" ScrollViewer.HorizontalScrollBarVisibility="Disabled" DisplayMemberPath="Address">
+                    <!-- Mailboxes Title -->
+                    <Grid Grid.Row="0" Margin="10,10,10,5">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Mailboxes" FontWeight="Bold" Foreground="#007ACC" FontSize="15"/>
+                            <TextBlock Name="StatusMailboxes" Text="" Foreground="#AAAAAA" FontStyle="Italic" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Search Bar (new position) -->
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="10,0,10,10">
+                        <TextBlock Text="Search:" VerticalAlignment="Center" Foreground="#E0E0E0" Margin="0,0,5,0"/>
+                        <TextBox Name="TxtSearchMailbox" Width="210" Height="25" Background="#2D2D30" Foreground="White" BorderBrush="#3F3F46" VerticalContentAlignment="Center" Padding="5,0" ToolTip="Search by Address or Type"/>
+                        <Button Name="BtnClearSearch" Content="Clear" Height="25" Width="50" Background="#555555" Foreground="White" BorderThickness="0" Margin="5,0,0,0"/>
+                    </StackPanel>
+
+                    <ListView Name="ListMailboxes" Grid.Row="2" Background="Transparent" BorderThickness="0" Margin="5" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListView.View>
+                            <GridView>
+                                <GridView.ColumnHeaderContainerStyle>
+                                    <Style TargetType="GridViewColumnHeader">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </Style>
+                                </GridView.ColumnHeaderContainerStyle>
+                                <GridViewColumn DisplayMemberBinding="{Binding Address}" Width="330"/>
+                            </GridView>
+                        </ListView.View>
                         <ListView.GroupStyle>
                             <GroupStyle>
                                 <GroupStyle.ContainerStyle>
@@ -131,7 +257,7 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                                                 <ControlTemplate TargetType="{x:Type GroupItem}">
                                                     <Expander IsExpanded="True" Background="#333337" BorderBrush="#3F3F46" BorderThickness="0,0,0,1" Margin="0,0,0,5">
                                                         <Expander.Header>
-                                                            <TextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="#007ACC" Margin="5,2" FontSize="13"/>
+                                                            <TextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="#007ACC" Margin="5,2" FontSize="14"/>
                                                         </Expander.Header>
                                                         <ItemsPresenter />
                                                     </Expander>
@@ -145,6 +271,9 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                     </ListView>
                 </Grid>
             </Border>
+
+            <!-- Resizable Splitter -->
+            <GridSplitter Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="Transparent" Width="5" Cursor="SizeWE"/>
 
             <!-- Right: Permissions & Actions -->
             <Grid Grid.Column="2">
@@ -166,13 +295,13 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="Mailbox Permissions" FontWeight="Bold" Foreground="#007ACC" FontSize="14"/>
+                                <TextBlock Text="Mailbox Permissions" FontWeight="Bold" Foreground="#007ACC" FontSize="15"/>
                                 <TextBlock Name="StatusMbx" Text="" Foreground="#AAAAAA" FontStyle="Italic" Margin="10,0,0,0" VerticalAlignment="Center"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                <Button Name="BtnAddMbx" Content="Add User" Height="22" Padding="8,0" Margin="0,0,5,0" Background="#3E3E42" Foreground="White" BorderThickness="0" FontSize="11"/>
-                                <Button Name="BtnEditMbx" Content="Edit Access" Height="22" Padding="8,0" Background="#3E3E42" Foreground="White" BorderThickness="0" FontSize="11"/>
-                                <Button Name="BtnRemoveMbx" Content="Remove User" Height="22" Padding="8,0" Margin="5,0,0,0" Background="#FF6B68" Foreground="White" BorderThickness="0" FontSize="11"/>
+                                <Button Name="BtnAddMbx" Content="Add" Height="22" Width="75" Margin="0,0,5,0" Background="#45B36A" Foreground="White" BorderThickness="0" FontSize="11" Cursor="Hand" FontWeight="Bold"/>
+                                <Button Name="BtnEditMbx" Content="Edit" Height="22" Width="75" Background="#FFB13B" Foreground="White" BorderThickness="0" FontSize="11" Cursor="Hand" FontWeight="Bold"/>
+                                <Button Name="BtnRemoveMbx" Content="Remove" Height="22" Width="75" Margin="5,0,0,0" Background="#FF6B68" Foreground="White" BorderThickness="0" FontSize="11" Cursor="Hand" FontWeight="Bold"/>
                             </StackPanel>
                         </Grid>
                         <ListView Name="GridMbxPerms" Grid.Row="1" Background="Transparent" Foreground="#E0E0E0" BorderThickness="0" Margin="5,0,5,5">
@@ -199,20 +328,20 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="Calendar Permissions" FontWeight="Bold" Foreground="#007ACC" FontSize="14"/>
+                                <TextBlock Text="Calendar Permissions" FontWeight="Bold" Foreground="#007ACC" FontSize="15"/>
                                 <TextBlock Name="StatusCal" Text="" Foreground="#AAAAAA" FontStyle="Italic" Margin="10,0,0,0" VerticalAlignment="Center"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                <Button Name="BtnAddCal" Content="Add User" Height="22" Padding="8,0" Margin="0,0,5,0" Background="#3E3E42" Foreground="White" BorderThickness="0" FontSize="11"/>
-                                <Button Name="BtnEditCal" Content="Edit Access" Height="22" Padding="8,0" Background="#3E3E42" Foreground="White" BorderThickness="0" FontSize="11"/>
-                                <Button Name="BtnRemoveCal" Content="Remove User" Height="22" Padding="8,0" Margin="5,0,0,0" Background="#FF6B68" Foreground="White" BorderThickness="0" FontSize="11"/>
+                                <Button Name="BtnAddCal" Content="Add" Height="22" Width="75" Margin="0,0,5,0" Background="#45B36A" Foreground="White" BorderThickness="0" FontSize="11" Cursor="Hand" FontWeight="Bold"/>
+                                <Button Name="BtnEditCal" Content="Edit" Height="22" Width="75" Background="#FFB13B" Foreground="White" BorderThickness="0" FontSize="11" Cursor="Hand" FontWeight="Bold"/>
+                                <Button Name="BtnRemoveCal" Content="Remove" Height="22" Width="75" Margin="5,0,0,0" Background="#FF6B68" Foreground="White" BorderThickness="0" FontSize="11" Cursor="Hand" FontWeight="Bold"/>
                             </StackPanel>
                         </Grid>
                         <ListView Name="GridCalPerms" Grid.Row="1" Background="Transparent" Foreground="#E0E0E0" BorderThickness="0" Margin="5,0,5,5">
                             <ListView.View>
                                 <GridView>
                                     <GridViewColumn Header="User (UPN)" Width="250" DisplayMemberBinding="{Binding User}"/>
-                                    <GridViewColumn Header="Calendar Rights" Width="200" DisplayMemberBinding="{Binding AccessRights}"/>
+                                    <GridViewColumn Header="Calendar Roles" Width="200" DisplayMemberBinding="{Binding AccessRights}"/>
                                 </GridView>
                             </ListView.View>
                         </ListView>
@@ -251,6 +380,7 @@ $BtnRemoveMbx = $Window.FindName("BtnRemoveMbx")
 $BtnRemoveCal = $Window.FindName("BtnRemoveCal")
 $StatusMbx = $Window.FindName("StatusMbx")
 $StatusCal = $Window.FindName("StatusCal")
+$StatusMailboxes = $Window.FindName("StatusMailboxes")
 
 # Create a synchronized hashtable to share data between GUI and Runspaces
 $SyncHash = [hashtable]::Synchronized(@{})
@@ -261,6 +391,7 @@ $SyncHash.TxtSearchMailbox = $TxtSearchMailbox
 $SyncHash.BtnClearSearch = $BtnClearSearch
 $SyncHash.StatusMbx = $StatusMbx
 $SyncHash.StatusCal = $StatusCal
+$SyncHash.StatusMailboxes = $StatusMailboxes
 $SyncHash.GridMbxPerms = $GridMbxPerms
 $SyncHash.GridCalPerms = $GridCalPerms
 $SyncHash.AllMailboxes = [System.Collections.ObjectModel.ObservableCollection[object]]::new()
@@ -288,11 +419,18 @@ function Show-PermissionDialog {
         [string]$User = "",
         [string[]]$Options,
         [string]$CurrentOption = "",
-        [bool]$UserEditable = $true
+        [string]$CurrentAutomapping = "", # New parameter for Automapping
+        [bool]$ShowAutomapping = $true,
+        [bool]$UserEditable = $true,
+        [string]$Label = "Access Rights / Role:" # Label for the main access dropdown
     )
 
+    $winHeight = if ($ShowAutomapping) { 310 } else { 235 }
+    $autoVisibility = if ($ShowAutomapping) { "Visible" } else { "Collapsed" }
+    $rightsMargin = if ($ShowAutomapping) { "0,0,0,10" } else { "0,0,0,20" }
+
     [xml]$DialogXaml = @"
-    <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Title="$Title" Height="300" Width="270" Background="#1E1E1E" Foreground="White" WindowStartupLocation="CenterOwner" ResizeMode="NoResize">
+    <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Title="$Title" Height="$winHeight" Width="270" Background="#1E1E1E" Foreground="White" WindowStartupLocation="CenterOwner" ResizeMode="NoResize">
         <Window.Resources>
             <Style TargetType="ComboBox">
                 <Setter Property="Background" Value="#2D2D30"/>
@@ -302,11 +440,60 @@ function Show-PermissionDialog {
                 <Setter Property="Padding" Value="5,0"/>
                 <Setter Property="VerticalContentAlignment" Value="Center"/>
                 <Setter Property="SnapsToDevicePixels" Value="True"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ComboBox">
+                            <Grid>
+                                <ToggleButton Name="ToggleButton" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Focusable="false" IsChecked="{Binding Path=IsDropDownOpen,Mode=TwoWay,RelativeSource={RelativeSource TemplatedParent}}" ClickMode="Press">
+                                    <ToggleButton.Template>
+                                        <ControlTemplate TargetType="ToggleButton">
+                                            <Border Name="Border" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="0">
+                                                <Grid HorizontalAlignment="Stretch">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition />
+                                                        <ColumnDefinition Width="20" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <Path Name="Arrow" Grid.Column="1" Fill="White" HorizontalAlignment="Center" VerticalAlignment="Center" Data="M 0 0 L 4 4 L 8 0 Z"/>
+                                                </Grid>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </ToggleButton.Template>
+                                </ToggleButton>
+                                <ContentPresenter Name="ContentSite" IsHitTestVisible="False" Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}" Margin="8,0,25,0" VerticalAlignment="Center" HorizontalAlignment="Left" />
+                                <Popup Name="Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}" AllowsTransparency="True" Focusable="False" PopupAnimation="Slide">
+                                    <Grid Name="DropDown" SnapsToDevicePixels="True" MinWidth="{TemplateBinding ActualWidth}" MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                        <Border Name="DropDownBorder" Background="#2D2D30" BorderThickness="1" BorderBrush="#3F3F46"/>
+                                        <ScrollViewer Margin="4,6,4,6" SnapsToDevicePixels="True">
+                                            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained" />
+                                        </ScrollViewer>
+                                    </Grid>
+                                </Popup>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
             </Style>
             <Style TargetType="ComboBoxItem">
                 <Setter Property="Background" Value="#2D2D30"/>
                 <Setter Property="Foreground" Value="White"/>
                 <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ComboBoxItem">
+                            <Border Name="Gd" Background="{TemplateBinding Background}" Padding="5,2">
+                                <ContentPresenter />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter TargetName="Gd" Property="Background" Value="#007ACC"/>
+                                </Trigger>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Gd" Property="Background" Value="#3E3E42"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
             </Style>
         </Window.Resources>
         <Grid Margin="20">
@@ -316,17 +503,30 @@ function Show-PermissionDialog {
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
             <TextBlock Text="User Principal Name (UPN):" FontWeight="Bold" Margin="0,0,0,5"/>
             <TextBox Name="TxtUser" Grid.Row="1" Height="25" Background="#2D2D30" Foreground="White" BorderBrush="#3F3F46" VerticalContentAlignment="Center" Margin="0,0,0,15"/>
+
+            <TextBlock Text="$Label" FontWeight="Bold" Grid.Row="2" Margin="0,0,0,5"/>
+            <ComboBox Name="CmbRights" Grid.Row="3" Height="25" Margin="$rightsMargin"/>
             
-            <TextBlock Text="Access Rights / Role:" FontWeight="Bold" Grid.Row="2" Margin="0,0,0,5"/>
-            <ComboBox Name="CmbRights" Grid.Row="3" Height="25" Margin="0,0,0,20"/>
-            
-            <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Name="BtnCancel" Content="Cancel" Width="80" Height="25" Margin="0,0,10,0" Background="#555555" Foreground="White" BorderThickness="0"/>
-                <Button Name="BtnSave" Content="Save Changes" Width="100" Height="25" Background="#007ACC" Foreground="White" BorderThickness="0" FontWeight="Bold"/>
+            <TextBlock Visibility="$autoVisibility" Text="Automapping Options:" FontWeight="Bold" Grid.Row="4" Margin="0,0,0,5"/>
+            <StackPanel Visibility="$autoVisibility" Grid.Row="5" Orientation="Horizontal" Margin="0,0,0,20">
+                <CheckBox Name="ChkEnableAuto" Content="Enable" Foreground="#E0E0E0" Margin="0,0,25,0" Cursor="Hand"/>
+                <CheckBox Name="ChkDisableAuto" Content="Disable" Foreground="#E0E0E0" Cursor="Hand"/>
             </StackPanel>
+
+            <Grid Grid.Row="6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Button Name="BtnCancel" Grid.Column="0" Content="Cancel" Height="25" Background="#555555" Foreground="White" BorderThickness="0"/>
+                <Button Name="BtnSave" Grid.Column="2" Content="Save Changes" Height="25" Background="#007ACC" Foreground="White" BorderThickness="0" FontWeight="Bold"/>
+            </Grid>
         </Grid>
     </Window>
 "@
@@ -343,6 +543,8 @@ function Show-PermissionDialog {
     $tUser = $diag.FindName("TxtUser")
     $cRights = $diag.FindName("CmbRights")
     $bSave = $diag.FindName("BtnSave")
+    $chkEnable = $diag.FindName("ChkEnableAuto")
+    $chkDisable = $diag.FindName("ChkDisableAuto")
     $bCancel = $diag.FindName("BtnCancel")
 
     $tUser.Text = $User
@@ -350,13 +552,29 @@ function Show-PermissionDialog {
     $Options | ForEach-Object { $null = $cRights.Items.Add($_) }
     $cRights.SelectedItem = $CurrentOption
 
+    # Mutual exclusivity for checkboxes
+    $chkEnable.Add_Checked({ $chkDisable.IsChecked = $false })
+    $chkDisable.Add_Checked({ $chkEnable.IsChecked = $false })
+
+    # Set initial state if provided (otherwise nothing is selected)
+    if ($CurrentAutomapping -eq "True") { $chkEnable.IsChecked = $true }
+    elseif ($CurrentAutomapping -eq "False") { $chkDisable.IsChecked = $true }
+
     $result = $null
     $bSave.Add_Click({
             $upn = $tUser.Text.Trim()
             # Validation: Allow Default, Anonymous, or valid email format
             if ($upn -eq "Default" -or $upn -eq "Anonymous" -or $upn -match '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$') {
                 if ($cRights.SelectedItem) {
-                    $script:DiagResult = @{ User = $upn; Rights = $cRights.SelectedItem }
+                    if ($ShowAutomapping -and -not ($chkEnable.IsChecked -or $chkDisable.IsChecked)) {
+                        [System.Windows.MessageBox]::Show("Please select an Automapping option (Enable or Disable).")
+                        return
+                    }
+                    $script:DiagResult = @{ 
+                        User        = $upn; 
+                        Rights      = $cRights.SelectedItem; 
+                        Automapping = if ($ShowAutomapping) { [bool]$chkEnable.IsChecked } else { $true } 
+                    }
                     $diag.Close()
                 }
                 else { [System.Windows.MessageBox]::Show("Please select access rights.") }
@@ -440,7 +658,7 @@ $SyncHash.GetPermissionsAsync = {
             try {
                 if ($doMbx) {
                     Write-Host "[$(Get-Date -f HH:mm:ss)] DEBUG: Fetching mailbox permissions for $mbx..." -ForegroundColor Gray
-                    $mbxPerms = Get-EXOMailboxPermission -Identity $mbx | Where-Object { ($_.User -eq "NT AUTHORITY\SELF" -or $_.User -notlike "NT AUTHORITY\*") -and ($_.IsInherited -eq $false) }
+                    $mbxPerms = Get-EXOMailboxPermission -Identity $mbx | Where-Object { ($_.User -match "SELF" -or $_.User -notlike "NT AUTHORITY\*") -and ($_.IsInherited -eq $false) }
                     $mCount = @($mbxPerms).Count
                     
                     $SyncHash.Window.Dispatcher.Invoke([Action[string, object, int]] {
@@ -448,7 +666,9 @@ $SyncHash.GetPermissionsAsync = {
                             if ($SyncHash.CurrentTargetMbx -ne $targetMbx) { return }
                             Write-Host "[$(Get-Date -f HH:mm:ss)] Loaded $count mailbox permissions." -ForegroundColor Gray
                             foreach ($p in $perms) {
-                                $userDisp = if ($p.User -eq "NT AUTHORITY\SELF") { $targetMbx } else { $p.User }
+                                $uStr = $p.User.ToString()
+                                $userDisp = if ($uStr -match "SELF") { $targetMbx } else { $uStr.Split(':')[-1] }
+
                                 $SyncHash.GridMbxPerms.Items.Add([PSCustomObject]@{User = $userDisp; AccessRights = ($p.AccessRights -join ', ') }) | Out-Null
                             }
                             $SyncHash.StatusMbx.Text = ""
@@ -470,7 +690,7 @@ $SyncHash.GetPermissionsAsync = {
                         if ($calFolder) {
                             Write-Host "[$(Get-Date -f HH:mm:ss)] DEBUG: Found calendar folder '$($calFolder.Name)' for $mbx. Fetching permissions..." -ForegroundColor Gray
                             $calPath = "$($mbx):\$($calFolder.Name)"
-                            $calPerms = Get-EXOMailboxFolderPermission -Identity $calPath -ErrorAction Stop | Where-Object { $_.User -notlike "NT AUTHORITY\*" -and $_.AccessRights -ne "None" }
+                            $calPerms = Get-EXOMailboxFolderPermission -Identity $calPath -ErrorAction Stop | Where-Object { $_.User -notlike "NT AUTHORITY\*" }
                             $cCount = @($calPerms).Count
                     
                             $SyncHash.Window.Dispatcher.Invoke([Action[string, object, int, string]] {
@@ -535,13 +755,13 @@ function Update-PermissionAsync {
             try {
                 if ($type -eq "Mailbox") {
                     if ($action -eq "Add") {
-                        Add-MailboxPermission -Identity $mbx -User $data.User -AccessRights @($data.Rights) -InheritanceType All -ErrorAction Stop
+                        Add-MailboxPermission -Identity $mbx -User $data.User -AccessRights @($data.Rights) -InheritanceType All -AutoMapping $data.Automapping -ErrorAction Stop
                     }
                     else {
                         # Action is "Edit"
                         # For Mailbox permissions, we remove the old set and add the new one
                         Remove-MailboxPermission -Identity $mbx -User $data.User -AccessRights ($oldRights -split ',' | ForEach-Object { $_.Trim() }) -InheritanceType All -Confirm:$false -ErrorAction Stop
-                        Add-MailboxPermission -Identity $mbx -User $data.User -AccessRights @($data.Rights) -InheritanceType All -ErrorAction Stop
+                        Add-MailboxPermission -Identity $mbx -User $data.User -AccessRights @($data.Rights) -InheritanceType All -AutoMapping $data.Automapping -ErrorAction Stop
                     }
                 }
                 else {
@@ -680,12 +900,12 @@ function Remove-PermissionAsync {
 }
 
 # --- Permission Button Events ---
-$mailboxRights = @("ChangeOwner", "ChangePermission", "DeleteItem", "ExternalAccount", "FullAccess", "ReadPermission")
-$calendarRoles = @("None", "Author", "Contributor", "Editor", "NonEditingAuthor", "Owner", "PublishingAuthor", "PublishingEditor", "Reviewer")
+$mailboxRights = @("ChangeOwner", "ChangePermission", "DeleteItem", "ExternalAccount", "FullAccess", "ReadPermission") | Sort-Object
+$calendarRoles = @("None", "AvailabilityOnly", "LimitedDetails", "Author", "Contributor", "Editor", "NonEditingAuthor", "Owner", "PublishingAuthor", "PublishingEditor", "Reviewer") | Sort-Object
 
 $BtnAddMbx.Add_Click({
         Write-Host "[$(Get-Date -f HH:mm:ss)] BtnAddMbx clicked." -ForegroundColor Magenta
-        $res = Show-PermissionDialog -Title "Add Mailbox Permission" -Options $mailboxRights
+        $res = Show-PermissionDialog -Title "Add Mailbox Permission" -Options $mailboxRights -Label "Access Rights:"
         if ($res) { Update-PermissionAsync -Type "Mailbox" -Action "Add" -Data $res } else { Write-Host "[$(Get-Date -f HH:mm:ss)] Show-PermissionDialog for AddMbx returned null." -ForegroundColor Yellow }
     })
 
@@ -693,7 +913,9 @@ $BtnEditMbx.Add_Click({
         Write-Host "[$(Get-Date -f HH:mm:ss)] BtnEditMbx clicked." -ForegroundColor Magenta
         $sel = $GridMbxPerms.SelectedItem
         if (-not $sel) { [System.Windows.MessageBox]::Show("Please select a user from the list."); return }
-        $res = Show-PermissionDialog -Title "Edit Mailbox Permission" -User $sel.User -Options $mailboxRights -CurrentOption $sel.AccessRights -UserEditable $false
+        # Extract the first access right for display in the dropdown
+        $currentRight = ($sel.AccessRights -split "," | Select-Object -First 1 | ForEach-Object { $_.Trim() })
+        $res = Show-PermissionDialog -Title "Edit Mailbox Permission" -User $sel.User -Options $mailboxRights -CurrentOption $currentRight -CurrentAutomapping "" -UserEditable $false -Label "Access Rights:"
         if ($res) { Update-PermissionAsync -Type "Mailbox" -Action "Edit" -Data $res -OldRights $sel.AccessRights } else { Write-Host "[$(Get-Date -f HH:mm:ss)] Show-PermissionDialog for EditMbx returned null." -ForegroundColor Yellow }
     })
 
@@ -708,7 +930,7 @@ $BtnRemoveMbx.Add_Click({
 
 $BtnAddCal.Add_Click({
         Write-Host "[$(Get-Date -f HH:mm:ss)] BtnAddCal clicked." -ForegroundColor Magenta
-        $res = Show-PermissionDialog -Title "Add Calendar Permission" -Options $calendarRoles
+        $res = Show-PermissionDialog -Title "Add Calendar Permission" -Options $calendarRoles -Label "Access Roles:" -ShowAutomapping $false
         if ($res) { Update-PermissionAsync -Type "Calendar" -Action "Add" -Data $res } else { Write-Host "[$(Get-Date -f HH:mm:ss)] Show-PermissionDialog for AddCal returned null." -ForegroundColor Yellow }
     })
 
@@ -717,7 +939,7 @@ $BtnEditCal.Add_Click({
         $sel = $GridCalPerms.SelectedItem
         if (-not $sel) { [System.Windows.MessageBox]::Show("Please select a user from the list."); return }
         $currentRole = $sel.AccessRights -split "," | Select-Object -First 1 | ForEach-Object { $_.Trim() }
-        $res = Show-PermissionDialog -Title "Edit Calendar Permission" -User $sel.User -Options $calendarRoles -CurrentOption $currentRole -UserEditable $false
+        $res = Show-PermissionDialog -Title "Edit Calendar Permission" -User $sel.User -Options $calendarRoles -CurrentOption $currentRole -UserEditable $false -Label "Access Roles:" -ShowAutomapping $false
         if ($res) { Update-PermissionAsync -Type "Calendar" -Action "Edit" -Data $res } else { Write-Host "[$(Get-Date -f HH:mm:ss)] Show-PermissionDialog for EditCal returned null." -ForegroundColor Yellow }
     })
 
@@ -774,9 +996,10 @@ $BtnConnect.Add_Click({
 
                     # Update UI to Connected
                     $SyncHash.Window.Dispatcher.Invoke({
-                            $SyncHash.BtnConnect.Content = "Loading Mailboxes..."
-                            $SyncHash.BtnConnect.Background = "#FFD700"
-                            $SyncHash.BtnConnect.Foreground = "Black"
+                            $SyncHash.BtnConnect.Content = "Connected"
+                            $SyncHash.BtnConnect.Background = "#28A745" # Success Green
+                            $SyncHash.BtnConnect.Foreground = "White"
+                            $SyncHash.StatusMailboxes.Text = "(Fetching...)"
                         })
 
                     # Fetch all Mailboxes
@@ -825,10 +1048,7 @@ $BtnConnect.Add_Click({
                             $view = [System.Windows.Data.CollectionViewSource]::GetDefaultView($SyncHash.AllMailboxes)
                             $view.Refresh()
 
-                            # Update UI to Connected
-                            $SyncHash.BtnConnect.Content = "Connected"
-                            $SyncHash.BtnConnect.Background = "#28A745" # Success Green
-                            $SyncHash.BtnConnect.Foreground = "White"   # White text back for green
+                            $SyncHash.StatusMailboxes.Text = ""
                         })
                 }
                 catch {
@@ -839,6 +1059,7 @@ $BtnConnect.Add_Click({
                             $SyncHash.BtnConnect.Background = "#FF6B68" # Red
                             $SyncHash.BtnConnect.IsHitTestVisible = $true
                             $SyncHash.BtnConnect.Foreground = "White"
+                            $SyncHash.StatusMailboxes.Text = "(Error)"
                         })
                 }
             }).AddArgument($Delegated).AddArgument($Org)
