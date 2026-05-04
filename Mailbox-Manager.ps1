@@ -261,6 +261,8 @@ $SyncHash.TxtSearchMailbox = $TxtSearchMailbox
 $SyncHash.BtnClearSearch = $BtnClearSearch
 $SyncHash.StatusMbx = $StatusMbx
 $SyncHash.StatusCal = $StatusCal
+$SyncHash.GridMbxPerms = $GridMbxPerms
+$SyncHash.GridCalPerms = $GridCalPerms
 $SyncHash.AllMailboxes = [System.Collections.ObjectModel.ObservableCollection[object]]::new()
 
 # Initialize Grouping and Sorting on the UI Thread (Setup once)
@@ -273,7 +275,7 @@ $ListMailboxes.ItemsSource = $view
 # Erstelle einen RunspacePool mit InitialSessionState (um SyncHash global verfügbar zu machen)
 $ISS = [System.Management.Automation.Runspaces.InitialSessionState]::CreateDefault()
 $ISS.Variables.Add((New-Object System.Management.Automation.Runspaces.SessionStateVariableEntry('SyncHash', $SyncHash, $null)))
-$Pool = [runspacefactory]::CreateRunspacePool(1, 5, $ISS, $Host)
+$Pool = [runspacefactory]::CreateRunspacePool(1, 1, $ISS, $Host)
 $Pool.ApartmentState = "STA"
 $Pool.Open()
 
@@ -351,15 +353,15 @@ function Show-PermissionDialog {
     $result = $null
     $bSave.Add_Click({
             $upn = $tUser.Text.Trim()
-            # Validation: Valid Email format OR Standard OR Anonymous
-            if ($upn -match '^([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}|Standard|Anonymous)$') {
+            # Validation: Allow Default, Anonymous, or valid email format
+            if ($upn -eq "Default" -or $upn -eq "Anonymous" -or $upn -match '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$') {
                 if ($cRights.SelectedItem) {
                     $script:DiagResult = @{ User = $upn; Rights = $cRights.SelectedItem }
                     $diag.Close()
                 }
                 else { [System.Windows.MessageBox]::Show("Please select access rights.") }
             }
-            else { [System.Windows.MessageBox]::Show("Please enter a valid UPN (e.g. user@domain.com) or use 'Standard' / 'Anonymous'.") }
+            else { [System.Windows.MessageBox]::Show("Please enter a valid UPN (e.g. user@domain.com) or use 'Default' / 'Anonymous'.") }
         })
     $bCancel.Add_Click({ $diag.Close() })
 
@@ -411,6 +413,112 @@ function Show-ConfirmDialog {
 # ==============================================================================
 # 5. PERMISSION UPDATE LOGIC
 # ==============================================================================
+$SyncHash.GetPermissionsAsync = {
+    param(
+        [string]$Mailbox,
+        [bool]$FetchMbx = $true,
+        [bool]$FetchCal = $true
+    )
+    
+    # UI Preparation on the main thread
+    $SyncHash.CurrentTargetMbx = $Mailbox
+    $SyncHash.SelectedMbx = $Mailbox
+
+    if ($FetchMbx) {
+        $SyncHash.GridMbxPerms.Items.Clear()
+        $SyncHash.StatusMbx.Text = "(Fetching...)"
+    }
+    if ($FetchCal) {
+        $SyncHash.GridCalPerms.Items.Clear()
+        $SyncHash.StatusCal.Text = "(Fetching...)"
+    }
+
+    $PsPerms = [powershell]::Create().AddScript({
+            param($mbx, $SyncHash, $doMbx, $doCal)
+            Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
+            
+            try {
+                if ($doMbx) {
+                    Write-Host "[$(Get-Date -f HH:mm:ss)] DEBUG: Fetching mailbox permissions for $mbx..." -ForegroundColor Gray
+                    $mbxPerms = Get-EXOMailboxPermission -Identity $mbx | Where-Object { ($_.User -eq "NT AUTHORITY\SELF" -or $_.User -notlike "NT AUTHORITY\*") -and ($_.IsInherited -eq $false) }
+                    $mCount = @($mbxPerms).Count
+                    
+                    $SyncHash.Window.Dispatcher.Invoke([Action[string, object, int]] {
+                            param($targetMbx, $perms, $count)
+                            if ($SyncHash.CurrentTargetMbx -ne $targetMbx) { return }
+                            Write-Host "[$(Get-Date -f HH:mm:ss)] Loaded $count mailbox permissions." -ForegroundColor Gray
+                            foreach ($p in $perms) {
+                                $userDisp = if ($p.User -eq "NT AUTHORITY\SELF") { $targetMbx } else { $p.User }
+                                $SyncHash.GridMbxPerms.Items.Add([PSCustomObject]@{User = $userDisp; AccessRights = ($p.AccessRights -join ', ') }) | Out-Null
+                            }
+                            $SyncHash.StatusMbx.Text = ""
+                        }, $mbx, $mbxPerms, $mCount)
+                }
+
+                if ($doCal) {
+                    Write-Host "[$(Get-Date -f HH:mm:ss)] DEBUG: Locating calendar folder for $mbx..." -ForegroundColor Gray
+                    $rawCalFolders = Get-EXOMailboxFolderStatistics -Identity $mbx -FolderScope Calendar -ErrorAction Stop
+                    
+                    if ($null -eq $rawCalFolders -or $rawCalFolders.Count -eq 0) {
+                        $SyncHash.Window.Dispatcher.Invoke({ 
+                                Write-Host "[$(Get-Date -f HH:mm:ss)] WARNING: No calendar folder found for $mbx" -ForegroundColor Yellow 
+                                $SyncHash.StatusCal.Text = "(Not Found)"
+                            })
+                    }
+                    else {
+                        $calFolder = $rawCalFolders | Where-Object { $_.FolderType -match "Calendar" } | Select-Object -First 1
+                        if ($calFolder) {
+                            Write-Host "[$(Get-Date -f HH:mm:ss)] DEBUG: Found calendar folder '$($calFolder.Name)' for $mbx. Fetching permissions..." -ForegroundColor Gray
+                            $calPath = "$($mbx):\$($calFolder.Name)"
+                            $calPerms = Get-EXOMailboxFolderPermission -Identity $calPath -ErrorAction Stop | Where-Object { $_.User -notlike "NT AUTHORITY\*" -and $_.AccessRights -ne "None" }
+                            $cCount = @($calPerms).Count
+                    
+                            $SyncHash.Window.Dispatcher.Invoke([Action[string, object, int, string]] {
+                                    param($fName, $perms, $count, $targetMbx)
+                                    if ($SyncHash.CurrentTargetMbx -ne $targetMbx) { return }
+                                    Write-Host "[$(Get-Date -f HH:mm:ss)] Found calendar folder: $fName. Loaded $count permissions." -ForegroundColor Gray
+                                    foreach ($p in $perms) {
+                                        $userDisp = if ($p.User.UserPrincipalName) { $p.User.UserPrincipalName }
+                                        elseif ($p.User.ToString() -match "Default") { "Default" }
+                                        elseif ($p.User.ToString() -match "Anonymous") { "Anonymous" }
+                                        else { $p.User.ToString() -split ":" | Select-Object -Last 1 }
+                                        $SyncHash.GridCalPerms.Items.Add([PSCustomObject]@{User = $userDisp; AccessRights = ($p.AccessRights -join ', ') }) | Out-Null
+                                    }
+                                    $SyncHash.StatusCal.Text = ""
+                                }, $calFolder.Name, $calPerms, $cCount, $mbx)
+                        }
+                        else {
+                            $SyncHash.Window.Dispatcher.Invoke({ 
+                                    Write-Host "[$(Get-Date -f HH:mm:ss)] WARNING: No 'Calendar' type folder found for $mbx" -ForegroundColor Yellow 
+                                    $SyncHash.StatusCal.Text = "(Not Found)"
+                                })
+                        }
+                    }
+                }
+            }
+            catch {
+                $err = $_.Exception.Message
+                if ($err -match "is closed|broken pipe|network connection") {
+                    $SyncHash.Window.Dispatcher.Invoke({
+                            [System.Windows.MessageBox]::Show("Exchange Online connection lost (Closed/Broken). Please reconnect.")
+                            $SyncHash.StatusMbx.Text = "(Error)"
+                            $SyncHash.StatusCal.Text = "(Error)"
+                        })
+                }
+                else {
+                    $SyncHash.Window.Dispatcher.Invoke({ 
+                            Write-Host "[$(Get-Date -f HH:mm:ss)] ERROR fetching perms for $mbx : $err" -ForegroundColor Red 
+                            if ($doMbx) { $SyncHash.StatusMbx.Text = "(Error)" }
+                            if ($doCal) { $SyncHash.StatusCal.Text = "(Error)" }
+                        })
+                }
+            }
+        }).AddArgument($Mailbox).AddArgument($SyncHash).AddArgument($FetchMbx).AddArgument($FetchCal)
+    
+    $PsPerms.RunspacePool = $Pool
+    $PsPerms.BeginInvoke() | Out-Null
+}
+
 function Update-PermissionAsync {
     param([string]$Type, [string]$Action, [hashtable]$Data, [string]$OldRights = "")
     
@@ -423,23 +531,27 @@ function Update-PermissionAsync {
     $PowerShell = [powershell]::Create().AddScript({
             param($mbx, $type, $action, $data, $SyncHash, $oldRights)
             Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
+            
             try {
                 if ($type -eq "Mailbox") {
                     if ($action -eq "Add") {
-                        Add-MailboxPermission -Identity $mbx -User $data.User -AccessRights $data.Rights -InheritanceType All -ErrorAction Stop
+                        Add-MailboxPermission -Identity $mbx -User $data.User -AccessRights @($data.Rights) -InheritanceType All -ErrorAction Stop
                     }
                     else {
                         # Action is "Edit"
                         # For Mailbox permissions, we remove the old set and add the new one
                         Remove-MailboxPermission -Identity $mbx -User $data.User -AccessRights ($oldRights -split ',' | ForEach-Object { $_.Trim() }) -InheritanceType All -Confirm:$false -ErrorAction Stop
-                        Add-MailboxPermission -Identity $mbx -User $data.User -AccessRights $data.Rights -InheritanceType All -ErrorAction Stop
+                        Add-MailboxPermission -Identity $mbx -User $data.User -AccessRights @($data.Rights) -InheritanceType All -ErrorAction Stop
                     }
                 }
                 else {
                     # Calendar
                     $raw = Get-EXOMailboxFolderStatistics -Identity $mbx -FolderScope Calendar
-                    $folder = $raw | Where-Object { $_.FolderType -match "Calendar" } | Select-Object -First 1
+                    $folder = $raw | Where-Object { $_.FolderType -eq "Calendar" -or $_.Name -eq "Calendar" } | Select-Object -First 1
+                    if (-not $folder) { throw "Calendar folder not found for $mbx" }
+
                     $path = "$($mbx):\$($folder.Name)"
+                    
                     if ($action -eq "Add") {
                         Add-MailboxFolderPermission -Identity $path -User $data.User -AccessRights $data.Rights -ErrorAction Stop
                     }
@@ -448,20 +560,42 @@ function Update-PermissionAsync {
                     }
                 }
 
-                # Success: Trigger UI refresh on the main thread
+                # Show waiting status
                 $SyncHash.Window.Dispatcher.Invoke({
-                        $SyncHash.ListMailboxes.RaiseEvent((New-Object System.Windows.Controls.SelectionChangedEventArgs ([System.Windows.Controls.Primitives.Selector]::SelectionChangedEvent), @(), @()))
-                        $SyncHash.StatusMbx.Text = ""
-                        $SyncHash.StatusCal.Text = ""
+                        if ($type -eq "Mailbox") { $SyncHash.StatusMbx.Text = "(Waiting for Sync...)" }
+                        else { $SyncHash.StatusCal.Text = "(Waiting for Sync...)" }
                     })
+
+                # Wait for Exchange propagation
+                Start-Sleep -Seconds 5
+
+                # Success: Trigger UI refresh on the main thread
+                $SyncHash.Window.Dispatcher.Invoke([Action[string, string]] {
+                        param($m, $t)
+                        # If Mailbox changed, refresh both. If Calendar changed, only refresh Calendar.
+                        $refreshMbx = ($t -eq "Mailbox")
+                        & $SyncHash.GetPermissionsAsync -Mailbox $m -FetchMbx $refreshMbx -FetchCal $true
+                    }, $mbx, $type)
             }
             catch {
                 $err = $_.Exception.Message
-                $SyncHash.Window.Dispatcher.Invoke({
-                        [System.Windows.MessageBox]::Show("Error updating permissions:`n$err")
-                        $SyncHash.StatusMbx.Text = ""
-                        $SyncHash.StatusCal.Text = ""
-                    })
+                # Check if this is a connection-related error
+                # We remove broad matches to see the actual error in the popup instead of guessing
+                if ($err -match "is closed|broken pipe|network connection") {
+                    $SyncHash.Window.Dispatcher.Invoke({
+                            [System.Windows.MessageBox]::Show("Exchange Online connection lost (Closed/Broken). Please reconnect.")
+                            $SyncHash.StatusMbx.Text = ""
+                            $SyncHash.StatusCal.Text = ""
+                        })
+                }
+                else {
+                    $SyncHash.Window.Dispatcher.Invoke({
+                            Write-Host "[$(Get-Date -f HH:mm:ss)] Update Error: $err" -ForegroundColor Red
+                            [System.Windows.MessageBox]::Show("Error updating permissions:`n$err")
+                            $SyncHash.StatusMbx.Text = ""
+                            $SyncHash.StatusCal.Text = ""
+                        })
+                }
             }
         }).AddArgument($mbx).AddArgument($Type).AddArgument($Action).AddArgument($Data).AddArgument($SyncHash).AddArgument($OldRights)
 
@@ -484,6 +618,7 @@ function Remove-PermissionAsync {
     $PowerShell = [powershell]::Create().AddScript({
             param($mbx, $type, $user, $accessRights, $SyncHash)
             Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
+            
             try {
                 if ($type -eq "Mailbox") {
                     # Remove-MailboxPermission requires specific access rights to be removed.
@@ -494,25 +629,49 @@ function Remove-PermissionAsync {
                 else {
                     # Calendar
                     $raw = Get-EXOMailboxFolderStatistics -Identity $mbx -FolderScope Calendar
-                    $folder = $raw | Where-Object { $_.FolderType -match "Calendar" } | Select-Object -First 1
+                    $folder = $raw | Where-Object { $_.FolderType -eq "Calendar" -or $_.Name -eq "Calendar" } | Select-Object -First 1
+                    if (-not $folder) { throw "Calendar folder not found for $mbx" }
+
                     $path = "$($mbx):\$($folder.Name)"
-                    Remove-MailboxFolderPermission -Identity $path -User $user -AccessRights $accessRights -Confirm:$false -ErrorAction Stop
+                    Remove-MailboxFolderPermission -Identity $path -User $user -Confirm:$false -ErrorAction Stop
                 }
 
-                # Success: Trigger UI refresh on the main thread
+                # Show waiting status
                 $SyncHash.Window.Dispatcher.Invoke({
-                        $SyncHash.ListMailboxes.RaiseEvent((New-Object System.Windows.Controls.SelectionChangedEventArgs ([System.Windows.Controls.Primitives.Selector]::SelectionChangedEvent), @(), @()))
-                        $SyncHash.StatusMbx.Text = ""
-                        $SyncHash.StatusCal.Text = ""
+                        if ($type -eq "Mailbox") { $SyncHash.StatusMbx.Text = "(Waiting for Sync...)" }
+                        else { $SyncHash.StatusCal.Text = "(Waiting for Sync...)" }
                     })
+
+                # Wait for Exchange propagation
+                Start-Sleep -Seconds 5
+
+                # Success: Trigger UI refresh on the main thread
+                $SyncHash.Window.Dispatcher.Invoke([Action[string, string]] {
+                        param($m, $t)
+                        # If Mailbox changed, refresh both. If Calendar changed, only refresh Calendar.
+                        $refreshMbx = ($t -eq "Mailbox")
+                        & $SyncHash.GetPermissionsAsync -Mailbox $m -FetchMbx $refreshMbx -FetchCal $true
+                    }, $mbx, $type)
             }
             catch {
                 $err = $_.Exception.Message
-                $SyncHash.Window.Dispatcher.Invoke({
-                        [System.Windows.MessageBox]::Show("Error removing permissions:`n$err")
-                        $SyncHash.StatusMbx.Text = ""
-                        $SyncHash.StatusCal.Text = ""
-                    })
+                # Check if this is a connection-related error
+                # We remove broad matches to see the actual error in the popup instead of guessing
+                if ($err -match "is closed|broken pipe|network connection") {
+                    $SyncHash.Window.Dispatcher.Invoke({
+                            [System.Windows.MessageBox]::Show("Exchange Online connection lost (Closed/Broken). Please reconnect.")
+                            $SyncHash.StatusMbx.Text = ""
+                            $SyncHash.StatusCal.Text = ""
+                        })
+                }
+                else {
+                    $SyncHash.Window.Dispatcher.Invoke({
+                            Write-Host "[$(Get-Date -f HH:mm:ss)] Remove Error: $err" -ForegroundColor Red
+                            [System.Windows.MessageBox]::Show("Error removing permissions:`n$err")
+                            $SyncHash.StatusMbx.Text = ""
+                            $SyncHash.StatusCal.Text = ""
+                        })
+                }
             }
         }).AddArgument($mbx).AddArgument($Type).AddArgument($User).AddArgument($AccessRights).AddArgument($SyncHash)
     
@@ -522,7 +681,7 @@ function Remove-PermissionAsync {
 
 # --- Permission Button Events ---
 $mailboxRights = @("ChangeOwner", "ChangePermission", "DeleteItem", "ExternalAccount", "FullAccess", "ReadPermission")
-$calendarRoles = @("Author", "Contributor", "Editor", "NonEditingAuthor", "Owner", "PublishingAuthor", "PublishingEditor", "Reviewer")
+$calendarRoles = @("None", "Author", "Contributor", "Editor", "NonEditingAuthor", "Owner", "PublishingAuthor", "PublishingEditor", "Reviewer")
 
 $BtnAddMbx.Add_Click({
         Write-Host "[$(Get-Date -f HH:mm:ss)] BtnAddMbx clicked." -ForegroundColor Magenta
@@ -589,6 +748,10 @@ $BtnConnect.Add_Click({
         $Org = $TxtDelegatedOrg.Text
         Write-Host "[$(Get-Date -f HH:mm:ss)] Attempting to connect to Exchange (Delegated: $Delegated)..." -ForegroundColor Cyan
 
+        # Store connection info in SyncHash for background runspaces to reuse
+        $SyncHash.ConnectDelegated = $Delegated
+        $SyncHash.ConnectOrg = $Org
+
         $PowerShell = [powershell]::Create().AddScript({
                 $Delegated = $args[0]
                 $Org = $args[1]
@@ -596,13 +759,18 @@ $BtnConnect.Add_Click({
         
                 try {
                     if ($Delegated -and $Org) {
-                        Connect-ExchangeOnline -DelegatedOrganization $Org -ShowProgress $false
+                        Connect-ExchangeOnline -DelegatedOrganization $Org -ShowProgress $false -ErrorAction Stop
                     }
                     else {
-                        Connect-ExchangeOnline -ShowProgress $false
+                        Connect-ExchangeOnline -ShowProgress $false -ErrorAction Stop
                     }
 
                     $SyncHash.Window.Dispatcher.Invoke({ Write-Host "[$(Get-Date -f HH:mm:ss)] Connected. Fetching all mailboxes..." -ForegroundColor Green })
+
+                    # Capture the actual UPN used to login. This allows other runspaces to sync silently.
+                    $info = Get-ConnectionInformation | Select-Object -First 1
+                    $SyncHash.ConnectedUser = $info.UserPrincipalName
+                    Write-Host "[$(Get-Date -f HH:mm:ss)] Session Identity: $($SyncHash.ConnectedUser)" -ForegroundColor Gray
 
                     # Update UI to Connected
                     $SyncHash.Window.Dispatcher.Invoke({
@@ -720,92 +888,12 @@ $ListMailboxes.Add_SelectionChanged({
         if ($null -eq $selectedItem) { return }
 
         $mbxAddress = $selectedItem.Address
-        Write-Host "[$(Get-Date -f HH:mm:ss)] Mailbox selected: $mbxAddress. Fetching permissions..." -ForegroundColor Yellow
-
-        # UI sofort leeren (auf dem Main Thread)
-        $GridMbxPerms.Items.Clear()
-        $GridCalPerms.Items.Clear()
-        
-        $StatusMbx.Text = "(Fetching...)"
-        $StatusCal.Text = "(Fetching...)"
-
-        # Daten für den Hintergrund-Task vorbereiten
-        $SyncHash.SelectedMbx = $mbxAddress
-        $SyncHash.GridMbxPerms = $GridMbxPerms
-        $SyncHash.GridCalPerms = $GridCalPerms
-
-        $PsPerms = [powershell]::Create().AddScript({
-                Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
-                $mbx = $SyncHash.SelectedMbx
-        
-                try {
-                    Write-Host "[$(Get-Date -f HH:mm:ss)] DEBUG: Fetching mailbox permissions for $mbx..." -ForegroundColor Gray
-                    # 1. Mailbox Permissions
-                    $mbxPerms = Get-EXOMailboxPermission -Identity $mbx | Where-Object { ($_.User -eq "NT AUTHORITY\SELF" -or $_.User -notlike "NT AUTHORITY\*") -and ($_.IsInherited -eq $false) }
-                    $mCount = @($mbxPerms).Count
-                    
-                    $SyncHash.Window.Dispatcher.Invoke([Action[string, object, int]] {
-                            param($targetMbx, $perms, $count)
-                            Write-Host "[$(Get-Date -f HH:mm:ss)] Loaded $count mailbox permissions." -ForegroundColor Gray
-                            foreach ($p in $perms) {
-                                $userDisp = if ($p.User -eq "NT AUTHORITY\SELF") { $targetMbx } else { $p.User }
-                                $SyncHash.GridMbxPerms.Items.Add([PSCustomObject]@{User = $userDisp; AccessRights = ($p.AccessRights -join ', ') }) | Out-Null
-                            }
-                            $SyncHash.StatusMbx.Text = ""
-                        }, $mbx, $mbxPerms, $mCount)
-
-                    Write-Host "[$(Get-Date -f HH:mm:ss)] DEBUG: Locating calendar folder for $mbx..." -ForegroundColor Gray
-                    # 2. Kalender-Berechtigungen (Robuste Erkennung via FolderType)
-                    $rawCalFolders = Get-EXOMailboxFolderStatistics -Identity $mbx -FolderScope Calendar -ErrorAction Stop
-                    
-                    if ($null -eq $rawCalFolders -or $rawCalFolders.Count -eq 0) {
-                        Write-Host "[$(Get-Date -f HH:mm:ss)] DEBUG: Get-EXOMailboxFolderStatistics returned no folders for $mbx." -ForegroundColor Gray
-                        $SyncHash.Window.Dispatcher.Invoke({ 
-                                Write-Host "[$(Get-Date -f HH:mm:ss)] WARNING: No calendar folder found for $mbx" -ForegroundColor Yellow 
-                                $SyncHash.StatusCal.Text = "(Not Found)"
-                            })
-                    }
-                    else {
-                        Write-Host "[$(Get-Date -f HH:mm:ss)] DEBUG: Get-EXOMailboxFolderStatistics returned $($rawCalFolders.Count) items for $mbx." -ForegroundColor Gray
-                        $calFolder = $rawCalFolders | Where-Object { $_.FolderType -match "Calendar" } | Select-Object -First 1
-                        
-                        if ($calFolder) {
-                            Write-Host "[$(Get-Date -f HH:mm:ss)] DEBUG: Found calendar folder '$($calFolder.Name)' for $mbx. Fetching permissions..." -ForegroundColor Gray
-                            $calPath = "$($mbx):\$($calFolder.Name)"
-                            $calPerms = Get-EXOMailboxFolderPermission -Identity $calPath -ErrorAction Stop
-                            $cCount = @($calPerms).Count
-                    
-                            $SyncHash.Window.Dispatcher.Invoke([Action[string, object, int]] {
-                                    param($fName, $perms, $count)
-                                    Write-Host "[$(Get-Date -f HH:mm:ss)] Found calendar folder: $fName. Loaded $count permissions." -ForegroundColor Gray
-                                    foreach ($p in $perms) {
-                                        $userDisp = if ($p.User.UserPrincipalName) { $p.User.UserPrincipalName } else { $p.User.ToString() -split ":" | Select-Object -Last 1 }
-                                        $SyncHash.GridCalPerms.Items.Add([PSCustomObject]@{User = $userDisp; AccessRights = ($p.AccessRights -join ', ') }) | Out-Null
-                                    }
-                                    $SyncHash.StatusCal.Text = ""
-                                }, $calFolder.Name, $calPerms, $cCount)
-                        }
-                        else {
-                            # This case means rawCalFolders had items, but none matched FolderType -match "Calendar"
-                            $SyncHash.Window.Dispatcher.Invoke({ 
-                                    Write-Host "[$(Get-Date -f HH:mm:ss)] WARNING: No 'Calendar' type folder found among returned folders for $mbx" -ForegroundColor Yellow 
-                                    $SyncHash.StatusCal.Text = "(Not Found)"
-                                })
-                        }
-                    }
-                }
-                catch {
-                    $err = $_.Exception.Message
-                    $SyncHash.Window.Dispatcher.Invoke({ 
-                            Write-Host "[$(Get-Date -f HH:mm:ss)] ERROR fetching perms for $mbx : $err" -ForegroundColor Red 
-                            $SyncHash.StatusMbx.Text = "(Error)"
-                            $SyncHash.StatusCal.Text = "(Error)"
-                        })
-                }
-            })
-        $PsPerms.RunspacePool = $Pool
-        $PsPerms.BeginInvoke() | Out-Null
+        # Selection always fetches both
+        & $SyncHash.GetPermissionsAsync -Mailbox $mbxAddress -FetchMbx $true -FetchCal $true
     })
 
-# Show the GUI
+# ==============================================================================
+# 7. START THE APPLICATION
+# ==============================================================================
 $Window.ShowDialog() | Out-Null
+$Pool.Dispose()
