@@ -151,17 +151,31 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <!-- Mailbox Permissions -->
                 <Border Grid.Row="0" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="3" Margin="0,0,0,10">
                     <Grid Background="#252526">
-                        <StackPanel Orientation="Horizontal" Margin="10,10,0,0">
-                            <TextBlock Text="Mailbox Permissions" FontWeight="Bold" Foreground="#007ACC" FontSize="14"/>
-                            <TextBlock Name="StatusMbx" Text="" Foreground="#AAAAAA" FontStyle="Italic" Margin="10,0,0,0" VerticalAlignment="Center"/>
-                        </StackPanel>
-                        <ListView Name="GridMbxPerms" Background="Transparent" Foreground="#E0E0E0" BorderThickness="0" Margin="5,35,5,5">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <Grid Grid.Row="0" Margin="10,10,10,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Mailbox Permissions" FontWeight="Bold" Foreground="#007ACC" FontSize="14"/>
+                                <TextBlock Name="StatusMbx" Text="" Foreground="#AAAAAA" FontStyle="Italic" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button Name="BtnAddMbx" Content="Add User" Height="22" Padding="8,0" Margin="0,0,5,0" Background="#3E3E42" Foreground="White" BorderThickness="0" FontSize="11"/>
+                                <Button Name="BtnEditMbx" Content="Edit Access" Height="22" Padding="8,0" Background="#3E3E42" Foreground="White" BorderThickness="0" FontSize="11"/>
+                                <Button Name="BtnRemoveMbx" Content="Remove User" Height="22" Padding="8,0" Margin="5,0,0,0" Background="#FF6B68" Foreground="White" BorderThickness="0" FontSize="11"/>
+                            </StackPanel>
+                        </Grid>
+                        <ListView Name="GridMbxPerms" Grid.Row="1" Background="Transparent" Foreground="#E0E0E0" BorderThickness="0" Margin="5,0,5,5">
                             <ListView.View>
                                 <GridView>
                                     <GridViewColumn Header="User (UPN)" Width="250" DisplayMemberBinding="{Binding User}"/>
@@ -175,11 +189,26 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                 <!-- Calendar Permissions -->
                 <Border Grid.Row="1" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="3" Margin="0,0,0,10">
                     <Grid Background="#252526">
-                        <StackPanel Orientation="Horizontal" Margin="10,10,0,0">
-                            <TextBlock Text="Calendar Permissions" FontWeight="Bold" Foreground="#007ACC" FontSize="14"/>
-                            <TextBlock Name="StatusCal" Text="" Foreground="#AAAAAA" FontStyle="Italic" Margin="10,0,0,0" VerticalAlignment="Center"/>
-                        </StackPanel>
-                        <ListView Name="GridCalPerms" Background="Transparent" Foreground="#E0E0E0" BorderThickness="0" Margin="5,35,5,5">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <Grid Grid.Row="0" Margin="10,10,10,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Calendar Permissions" FontWeight="Bold" Foreground="#007ACC" FontSize="14"/>
+                                <TextBlock Name="StatusCal" Text="" Foreground="#AAAAAA" FontStyle="Italic" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button Name="BtnAddCal" Content="Add User" Height="22" Padding="8,0" Margin="0,0,5,0" Background="#3E3E42" Foreground="White" BorderThickness="0" FontSize="11"/>
+                                <Button Name="BtnEditCal" Content="Edit Access" Height="22" Padding="8,0" Background="#3E3E42" Foreground="White" BorderThickness="0" FontSize="11"/>
+                                <Button Name="BtnRemoveCal" Content="Remove User" Height="22" Padding="8,0" Margin="5,0,0,0" Background="#FF6B68" Foreground="White" BorderThickness="0" FontSize="11"/>
+                            </StackPanel>
+                        </Grid>
+                        <ListView Name="GridCalPerms" Grid.Row="1" Background="Transparent" Foreground="#E0E0E0" BorderThickness="0" Margin="5,0,5,5">
                             <ListView.View>
                                 <GridView>
                                     <GridViewColumn Header="User (UPN)" Width="250" DisplayMemberBinding="{Binding User}"/>
@@ -188,18 +217,6 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                             </ListView.View>
                         </ListView>
                     </Grid>
-                </Border>
-
-                <!-- Action Panel -->
-                <Border Grid.Row="2" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="3" Background="#252526" Padding="10">
-                    <StackPanel>
-                        <TextBlock Text="Manage Access (Selected Context)" FontWeight="Bold" Foreground="#007ACC" Margin="0,0,0,10" FontSize="14"/>
-                        <StackPanel Orientation="Horizontal">
-                            <TextBox Name="TxtUserUpn" Width="200" Height="25" Background="#2D2D30" Foreground="White" BorderBrush="#3F3F46" Margin="0,0,10,0" ToolTip="Enter UPN to Add/Change"/>
-                            <ComboBox Name="ComboRights" Width="150" Height="25" Background="#2D2D30" Foreground="White" BorderBrush="#3F3F46" Margin="0,0,10,0"/>
-                            <Button Name="BtnApply" Content="Add / Update Permission" Height="25" Padding="12,0" Background="#007ACC" Foreground="White" BorderThickness="0" FontWeight="Bold"/>
-                        </StackPanel>
-                    </StackPanel>
                 </Border>
             </Grid>
         </Grid>
@@ -226,7 +243,12 @@ $TxtSearchMailbox = $Window.FindName("TxtSearchMailbox")
 $BtnClearSearch = $Window.FindName("BtnClearSearch")
 $GridMbxPerms = $Window.FindName("GridMbxPerms")
 $GridCalPerms = $Window.FindName("GridCalPerms")
-$BtnApply = $Window.FindName("BtnApply")
+$BtnAddMbx = $Window.FindName("BtnAddMbx")
+$BtnEditMbx = $Window.FindName("BtnEditMbx")
+$BtnAddCal = $Window.FindName("BtnAddCal")
+$BtnEditCal = $Window.FindName("BtnEditCal")
+$BtnRemoveMbx = $Window.FindName("BtnRemoveMbx")
+$BtnRemoveCal = $Window.FindName("BtnRemoveCal")
 $StatusMbx = $Window.FindName("StatusMbx")
 $StatusCal = $Window.FindName("StatusCal")
 
@@ -254,6 +276,301 @@ $ISS.Variables.Add((New-Object System.Management.Automation.Runspaces.SessionSta
 $Pool = [runspacefactory]::CreateRunspacePool(1, 5, $ISS, $Host)
 $Pool.ApartmentState = "STA"
 $Pool.Open()
+
+# ==============================================================================
+# 4. PERMISSION DIALOG FUNCTION
+# ==============================================================================
+function Show-PermissionDialog {
+    param(
+        [string]$Title,
+        [string]$User = "",
+        [string[]]$Options,
+        [string]$CurrentOption = "",
+        [bool]$UserEditable = $true
+    )
+
+    [xml]$DialogXaml = @"
+    <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Title="$Title" Height="300" Width="270" Background="#1E1E1E" Foreground="White" WindowStartupLocation="CenterOwner" ResizeMode="NoResize">
+        <Window.Resources>
+            <Style TargetType="ComboBox">
+                <Setter Property="Background" Value="#2D2D30"/>
+                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="BorderBrush" Value="#3F3F46"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Padding" Value="5,0"/>
+                <Setter Property="VerticalContentAlignment" Value="Center"/>
+                <Setter Property="SnapsToDevicePixels" Value="True"/>
+            </Style>
+            <Style TargetType="ComboBoxItem">
+                <Setter Property="Background" Value="#2D2D30"/>
+                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="BorderThickness" Value="0"/>
+            </Style>
+        </Window.Resources>
+        <Grid Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <TextBlock Text="User Principal Name (UPN):" FontWeight="Bold" Margin="0,0,0,5"/>
+            <TextBox Name="TxtUser" Grid.Row="1" Height="25" Background="#2D2D30" Foreground="White" BorderBrush="#3F3F46" VerticalContentAlignment="Center" Margin="0,0,0,15"/>
+            
+            <TextBlock Text="Access Rights / Role:" FontWeight="Bold" Grid.Row="2" Margin="0,0,0,5"/>
+            <ComboBox Name="CmbRights" Grid.Row="3" Height="25" Margin="0,0,0,20"/>
+            
+            <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Name="BtnCancel" Content="Cancel" Width="80" Height="25" Margin="0,0,10,0" Background="#555555" Foreground="White" BorderThickness="0"/>
+                <Button Name="BtnSave" Content="Save Changes" Width="100" Height="25" Background="#007ACC" Foreground="White" BorderThickness="0" FontWeight="Bold"/>
+            </StackPanel>
+        </Grid>
+    </Window>
+"@
+    try {
+        $reader = (New-Object System.Xml.XmlNodeReader $DialogXaml)
+        $diag = [Windows.Markup.XamlReader]::Load($reader)
+        $diag.Owner = $SyncHash.Window
+    }
+    catch {
+        [System.Windows.MessageBox]::Show("Error loading permission dialog XAML: $($_.Exception.Message)", "XAML Error", "OK", "Error")
+        return $null
+    }
+
+    $tUser = $diag.FindName("TxtUser")
+    $cRights = $diag.FindName("CmbRights")
+    $bSave = $diag.FindName("BtnSave")
+    $bCancel = $diag.FindName("BtnCancel")
+
+    $tUser.Text = $User
+    $tUser.IsEnabled = $UserEditable
+    $Options | ForEach-Object { $null = $cRights.Items.Add($_) }
+    $cRights.SelectedItem = $CurrentOption
+
+    $result = $null
+    $bSave.Add_Click({
+            $upn = $tUser.Text.Trim()
+            # Validation: Valid Email format OR Standard OR Anonymous
+            if ($upn -match '^([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}|Standard|Anonymous)$') {
+                if ($cRights.SelectedItem) {
+                    $script:DiagResult = @{ User = $upn; Rights = $cRights.SelectedItem }
+                    $diag.Close()
+                }
+                else { [System.Windows.MessageBox]::Show("Please select access rights.") }
+            }
+            else { [System.Windows.MessageBox]::Show("Please enter a valid UPN (e.g. user@domain.com) or use 'Standard' / 'Anonymous'.") }
+        })
+    $bCancel.Add_Click({ $diag.Close() })
+
+    $diag.ShowDialog() | Out-Null
+    return $script:DiagResult
+}
+
+# ==============================================================================
+# 4.5. CONFIRMATION DIALOG FUNCTION
+# ==============================================================================
+function Show-ConfirmDialog {
+    param(
+        [string]$Title,
+        [string]$Message
+    )
+
+    [xml]$ConfirmXaml = @"
+    <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+            Title="$Title" Height="170" Width="400" Background="#1E1E1E" Foreground="White" 
+            WindowStartupLocation="CenterOwner" ResizeMode="NoResize" ShowInTaskbar="False">
+        <Grid Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <TextBlock Text="$Message" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="13" Foreground="#E0E0E0" FontFamily="Segoe UI"/>
+            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
+                <Button Name="BtnCancel" Content="Cancel" Width="85" Height="25" Margin="0,0,10,0" Background="#3E3E42" Foreground="White" BorderThickness="0" Cursor="Hand"/>
+                <Button Name="BtnConfirm" Content="Remove" Width="85" Height="25" Background="#FF6B68" Foreground="White" BorderThickness="0" FontWeight="Bold" Cursor="Hand"/>
+            </StackPanel>
+        </Grid>
+    </Window>
+"@
+    $reader = (New-Object System.Xml.XmlNodeReader $ConfirmXaml)
+    $diag = [Windows.Markup.XamlReader]::Load($reader)
+    $diag.Owner = $SyncHash.Window
+
+    $bConfirm = $diag.FindName("BtnConfirm")
+    $bCancel = $diag.FindName("BtnCancel")
+
+    $script:ConfirmResult = $false
+    $bConfirm.Add_Click({ $script:ConfirmResult = $true; $diag.Close() })
+    $bCancel.Add_Click({ $diag.Close() })
+
+    $diag.ShowDialog() | Out-Null
+    return $script:ConfirmResult
+}
+
+# ==============================================================================
+# 5. PERMISSION UPDATE LOGIC
+# ==============================================================================
+function Update-PermissionAsync {
+    param([string]$Type, [string]$Action, [hashtable]$Data, [string]$OldRights = "")
+    
+    $mbx = $SyncHash.SelectedMbx
+    if (-not $mbx) { return }
+
+    # Update UI to show we are working
+    if ($Type -eq "Mailbox") { $SyncHash.StatusMbx.Text = "(Saving...)" } else { $SyncHash.StatusCal.Text = "(Saving...)" }
+
+    $PowerShell = [powershell]::Create().AddScript({
+            param($mbx, $type, $action, $data, $SyncHash, $oldRights)
+            Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
+            try {
+                if ($type -eq "Mailbox") {
+                    if ($action -eq "Add") {
+                        Add-MailboxPermission -Identity $mbx -User $data.User -AccessRights $data.Rights -InheritanceType All -ErrorAction Stop
+                    }
+                    else {
+                        # Action is "Edit"
+                        # For Mailbox permissions, we remove the old set and add the new one
+                        Remove-MailboxPermission -Identity $mbx -User $data.User -AccessRights ($oldRights -split ',' | ForEach-Object { $_.Trim() }) -InheritanceType All -Confirm:$false -ErrorAction Stop
+                        Add-MailboxPermission -Identity $mbx -User $data.User -AccessRights $data.Rights -InheritanceType All -ErrorAction Stop
+                    }
+                }
+                else {
+                    # Calendar
+                    $raw = Get-EXOMailboxFolderStatistics -Identity $mbx -FolderScope Calendar
+                    $folder = $raw | Where-Object { $_.FolderType -match "Calendar" } | Select-Object -First 1
+                    $path = "$($mbx):\$($folder.Name)"
+                    if ($action -eq "Add") {
+                        Add-MailboxFolderPermission -Identity $path -User $data.User -AccessRights $data.Rights -ErrorAction Stop
+                    }
+                    else {
+                        Set-MailboxFolderPermission -Identity $path -User $data.User -AccessRights $data.Rights -ErrorAction Stop
+                    }
+                }
+
+                # Success: Trigger UI refresh on the main thread
+                $SyncHash.Window.Dispatcher.Invoke({
+                        $SyncHash.ListMailboxes.RaiseEvent((New-Object System.Windows.Controls.SelectionChangedEventArgs ([System.Windows.Controls.Primitives.Selector]::SelectionChangedEvent), @(), @()))
+                        $SyncHash.StatusMbx.Text = ""
+                        $SyncHash.StatusCal.Text = ""
+                    })
+            }
+            catch {
+                $err = $_.Exception.Message
+                $SyncHash.Window.Dispatcher.Invoke({
+                        [System.Windows.MessageBox]::Show("Error updating permissions:`n$err")
+                        $SyncHash.StatusMbx.Text = ""
+                        $SyncHash.StatusCal.Text = ""
+                    })
+            }
+        }).AddArgument($mbx).AddArgument($Type).AddArgument($Action).AddArgument($Data).AddArgument($SyncHash).AddArgument($OldRights)
+
+    $PowerShell.RunspacePool = $Pool
+    $PowerShell.BeginInvoke() | Out-Null # No callback needed, UI updates are handled internally
+}
+
+# ==============================================================================
+# 6. PERMISSION REMOVAL LOGIC
+# ==============================================================================
+function Remove-PermissionAsync {
+    param([string]$Type, [string]$User, [string]$AccessRights)
+    
+    $mbx = $SyncHash.SelectedMbx
+    if (-not $mbx) { return }
+
+    # Update UI to show we are working
+    if ($Type -eq "Mailbox") { $SyncHash.StatusMbx.Text = "(Removing...)" } else { $SyncHash.StatusCal.Text = "(Removing...)" }
+
+    $PowerShell = [powershell]::Create().AddScript({
+            param($mbx, $type, $user, $accessRights, $SyncHash)
+            Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
+            try {
+                if ($type -eq "Mailbox") {
+                    # Remove-MailboxPermission requires specific access rights to be removed.
+                    # If the displayed AccessRights is a comma-separated string, pass it as an array.
+                    $rightsToRemove = $accessRights -split ',' | ForEach-Object { $_.Trim() }
+                    Remove-MailboxPermission -Identity $mbx -User $user -AccessRights $rightsToRemove -InheritanceType All -Confirm:$false -ErrorAction Stop
+                }
+                else {
+                    # Calendar
+                    $raw = Get-EXOMailboxFolderStatistics -Identity $mbx -FolderScope Calendar
+                    $folder = $raw | Where-Object { $_.FolderType -match "Calendar" } | Select-Object -First 1
+                    $path = "$($mbx):\$($folder.Name)"
+                    Remove-MailboxFolderPermission -Identity $path -User $user -AccessRights $accessRights -Confirm:$false -ErrorAction Stop
+                }
+
+                # Success: Trigger UI refresh on the main thread
+                $SyncHash.Window.Dispatcher.Invoke({
+                        $SyncHash.ListMailboxes.RaiseEvent((New-Object System.Windows.Controls.SelectionChangedEventArgs ([System.Windows.Controls.Primitives.Selector]::SelectionChangedEvent), @(), @()))
+                        $SyncHash.StatusMbx.Text = ""
+                        $SyncHash.StatusCal.Text = ""
+                    })
+            }
+            catch {
+                $err = $_.Exception.Message
+                $SyncHash.Window.Dispatcher.Invoke({
+                        [System.Windows.MessageBox]::Show("Error removing permissions:`n$err")
+                        $SyncHash.StatusMbx.Text = ""
+                        $SyncHash.StatusCal.Text = ""
+                    })
+            }
+        }).AddArgument($mbx).AddArgument($Type).AddArgument($User).AddArgument($AccessRights).AddArgument($SyncHash)
+    
+    $PowerShell.RunspacePool = $Pool
+    $PowerShell.BeginInvoke() | Out-Null
+}
+
+# --- Permission Button Events ---
+$mailboxRights = @("ChangeOwner", "ChangePermission", "DeleteItem", "ExternalAccount", "FullAccess", "ReadPermission")
+$calendarRoles = @("Author", "Contributor", "Editor", "NonEditingAuthor", "Owner", "PublishingAuthor", "PublishingEditor", "Reviewer")
+
+$BtnAddMbx.Add_Click({
+        Write-Host "[$(Get-Date -f HH:mm:ss)] BtnAddMbx clicked." -ForegroundColor Magenta
+        $res = Show-PermissionDialog -Title "Add Mailbox Permission" -Options $mailboxRights
+        if ($res) { Update-PermissionAsync -Type "Mailbox" -Action "Add" -Data $res } else { Write-Host "[$(Get-Date -f HH:mm:ss)] Show-PermissionDialog for AddMbx returned null." -ForegroundColor Yellow }
+    })
+
+$BtnEditMbx.Add_Click({
+        Write-Host "[$(Get-Date -f HH:mm:ss)] BtnEditMbx clicked." -ForegroundColor Magenta
+        $sel = $GridMbxPerms.SelectedItem
+        if (-not $sel) { [System.Windows.MessageBox]::Show("Please select a user from the list."); return }
+        $res = Show-PermissionDialog -Title "Edit Mailbox Permission" -User $sel.User -Options $mailboxRights -CurrentOption $sel.AccessRights -UserEditable $false
+        if ($res) { Update-PermissionAsync -Type "Mailbox" -Action "Edit" -Data $res -OldRights $sel.AccessRights } else { Write-Host "[$(Get-Date -f HH:mm:ss)] Show-PermissionDialog for EditMbx returned null." -ForegroundColor Yellow }
+    })
+
+$BtnRemoveMbx.Add_Click({
+        Write-Host "[$(Get-Date -f HH:mm:ss)] BtnRemoveMbx clicked." -ForegroundColor Magenta
+        $sel = $GridMbxPerms.SelectedItem
+        if (-not $sel) { [System.Windows.MessageBox]::Show("Please select a user from the list."); return }
+        if (Show-ConfirmDialog -Title "Confirm Removal" -Message "Are you sure you want to remove the selected mailbox permission for $($sel.User) from $($SyncHash.SelectedMbx)?") {
+            Remove-PermissionAsync -Type "Mailbox" -User $sel.User -AccessRights $sel.AccessRights
+        }
+    })
+
+$BtnAddCal.Add_Click({
+        Write-Host "[$(Get-Date -f HH:mm:ss)] BtnAddCal clicked." -ForegroundColor Magenta
+        $res = Show-PermissionDialog -Title "Add Calendar Permission" -Options $calendarRoles
+        if ($res) { Update-PermissionAsync -Type "Calendar" -Action "Add" -Data $res } else { Write-Host "[$(Get-Date -f HH:mm:ss)] Show-PermissionDialog for AddCal returned null." -ForegroundColor Yellow }
+    })
+
+$BtnEditCal.Add_Click({
+        Write-Host "[$(Get-Date -f HH:mm:ss)] BtnEditCal clicked." -ForegroundColor Magenta
+        $sel = $GridCalPerms.SelectedItem
+        if (-not $sel) { [System.Windows.MessageBox]::Show("Please select a user from the list."); return }
+        $currentRole = $sel.AccessRights -split "," | Select-Object -First 1 | ForEach-Object { $_.Trim() }
+        $res = Show-PermissionDialog -Title "Edit Calendar Permission" -User $sel.User -Options $calendarRoles -CurrentOption $currentRole -UserEditable $false
+        if ($res) { Update-PermissionAsync -Type "Calendar" -Action "Edit" -Data $res } else { Write-Host "[$(Get-Date -f HH:mm:ss)] Show-PermissionDialog for EditCal returned null." -ForegroundColor Yellow }
+    })
+
+$BtnRemoveCal.Add_Click({
+        Write-Host "[$(Get-Date -f HH:mm:ss)] BtnRemoveCal clicked." -ForegroundColor Magenta
+        $sel = $GridCalPerms.SelectedItem
+        if (-not $sel) { [System.Windows.MessageBox]::Show("Please select a user from the list."); return }
+        if (Show-ConfirmDialog -Title "Confirm Removal" -Message "Are you sure you want to remove the selected calendar permission for $($sel.User) from $($SyncHash.SelectedMbx)?") {
+            $currentRole = $sel.AccessRights -split "," | Select-Object -First 1 | ForEach-Object { $_.Trim() }
+            Remove-PermissionAsync -Type "Calendar" -User $sel.User -AccessRights $currentRole
+        }
+    })
 
 # --- Event: Checkbox Toggle ---
 $ChkDelegated.Add_Checked({
