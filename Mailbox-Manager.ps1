@@ -85,11 +85,12 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
     <Grid Margin="15">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
         <!-- Top Connection Bar -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
             <Button Name="BtnConnect" Content="Connect to Exchange" Height="30" Width="180" Background="#007ACC" Foreground="White" BorderThickness="0" Cursor="Hand" FontWeight="Bold" Margin="0,0,20,0"/>
             
             <CheckBox Name="ChkDelegated" Content="Use Delegated Authentication:" VerticalAlignment="Center" Foreground="#E0E0E0" Margin="0,0,5,0"/>
@@ -105,9 +106,9 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
         </StackPanel>
 
         <!-- Main Content Area -->
-        <Grid Grid.Row="1">
+        <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="500"/>
+                <ColumnDefinition Width="335"/>
                 <ColumnDefinition Width="15"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
@@ -156,7 +157,10 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                 <!-- Mailbox Permissions -->
                 <Border Grid.Row="0" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="3" Margin="0,0,0,10">
                     <Grid Background="#252526">
-                        <TextBlock Text="Mailbox Permissions" FontWeight="Bold" Margin="10,10,0,0" Foreground="#007ACC" FontSize="14"/>
+                        <StackPanel Orientation="Horizontal" Margin="10,10,0,0">
+                            <TextBlock Text="Mailbox Permissions" FontWeight="Bold" Foreground="#007ACC" FontSize="14"/>
+                            <TextBlock Name="StatusMbx" Text="" Foreground="#AAAAAA" FontStyle="Italic" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                        </StackPanel>
                         <ListView Name="GridMbxPerms" Background="Transparent" Foreground="#E0E0E0" BorderThickness="0" Margin="5,35,5,5">
                             <ListView.View>
                                 <GridView>
@@ -173,7 +177,7 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                     <Grid Background="#252526">
                         <StackPanel Orientation="Horizontal" Margin="10,10,0,0">
                             <TextBlock Text="Calendar Permissions" FontWeight="Bold" Foreground="#007ACC" FontSize="14"/>
-                            <TextBlock Text=" [?] Hover for Info" Foreground="#AAAAAA" Cursor="Help" ToolTip="{StaticResource CalendarRolesTooltip}" Margin="10,0,0,0"/>
+                            <TextBlock Name="StatusCal" Text="" Foreground="#AAAAAA" FontStyle="Italic" Margin="10,0,0,0" VerticalAlignment="Center"/>
                         </StackPanel>
                         <ListView Name="GridCalPerms" Background="Transparent" Foreground="#E0E0E0" BorderThickness="0" Margin="5,35,5,5">
                             <ListView.View>
@@ -223,6 +227,8 @@ $BtnClearSearch = $Window.FindName("BtnClearSearch")
 $GridMbxPerms = $Window.FindName("GridMbxPerms")
 $GridCalPerms = $Window.FindName("GridCalPerms")
 $BtnApply = $Window.FindName("BtnApply")
+$StatusMbx = $Window.FindName("StatusMbx")
+$StatusCal = $Window.FindName("StatusCal")
 
 # Create a synchronized hashtable to share data between GUI and Runspaces
 $SyncHash = [hashtable]::Synchronized(@{})
@@ -231,12 +237,14 @@ $SyncHash.ListMailboxes = $ListMailboxes
 $SyncHash.BtnConnect = $BtnConnect
 $SyncHash.TxtSearchMailbox = $TxtSearchMailbox
 $SyncHash.BtnClearSearch = $BtnClearSearch
+$SyncHash.StatusMbx = $StatusMbx
+$SyncHash.StatusCal = $StatusCal
 $SyncHash.AllMailboxes = [System.Collections.ObjectModel.ObservableCollection[object]]::new()
 
 # Initialize Grouping and Sorting on the UI Thread (Setup once)
 $view = [System.Windows.Data.CollectionViewSource]::GetDefaultView($SyncHash.AllMailboxes)
 $view.GroupDescriptions.Add((New-Object System.Windows.Data.PropertyGroupDescription("Type")))
-$view.SortDescriptions.Add((New-Object System.ComponentModel.SortDescription("Type", [System.ComponentModel.ListSortDirection]::Ascending)))
+$view.SortDescriptions.Add((New-Object System.ComponentModel.SortDescription("SortOrder", [System.ComponentModel.ListSortDirection]::Ascending)))
 $view.SortDescriptions.Add((New-Object System.ComponentModel.SortDescription("Address", [System.ComponentModel.ListSortDirection]::Ascending)))
 $ListMailboxes.ItemsSource = $view
 
@@ -291,27 +299,35 @@ $BtnConnect.Add_Click({
 
                     # Filter and categorize mailboxes
                     $filteredMailboxes = [System.Collections.ArrayList]::new()
-                    $validTypes = @("UserMailbox", "SharedMailbox", "RoomMailbox", "EquipmentMailbox")
                     foreach ($mbx in $allMailboxes) {
-                        if ($validTypes -contains $mbx.RecipientTypeDetails) {
-                            # Map RecipientTypeDetails to user-friendly group names
-                            $groupName = switch ($mbx.RecipientTypeDetails) {
-                                "UserMailbox" { "User" }
-                                "SharedMailbox" { "Shared" }
-                                "RoomMailbox" { "Room & Equipment" }
-                                "EquipmentMailbox" { "Room & Equipment" }
-                                Default { "Other" } # Should not happen with the filter
-                            }
-                            $null = $filteredMailboxes.Add([PSCustomObject]@{
-                                    Address      = $mbx.PrimarySmtpAddress;
-                                    Type         = $groupName; # Use the mapped group name for sorting/grouping
-                                    OriginalType = $mbx.RecipientTypeDetails # Keep original for potential future use
-                                })
+                        # Map RecipientTypeDetails to user-friendly group names and assign a sort order
+                        $groupName = switch ($mbx.RecipientTypeDetails) {
+                            "UserMailbox" { "User" }
+                            "SharedMailbox" { "Shared" }
+                            "RoomMailbox" { "Room & Equipment" }
+                            "EquipmentMailbox" { "Room & Equipment" }
+                            Default { "Other" }
                         }
-                    }
+                        
+                        $sortOrder = switch ($groupName) {
+                            "User" { 1 }
+                            "Shared" { 2 }
+                            "Room & Equipment" { 3 }
+                            "Other" { 4 }
+                            Default { 99 } # Fallback for any unhandled group names, though "Other" should catch all
+                        }
+
+                        $null = $filteredMailboxes.Add([PSCustomObject]@{
+                                Address      = $mbx.PrimarySmtpAddress;
+                                Type         = $groupName; # Use the mapped group name for sorting/grouping
+                                OriginalType = $mbx.RecipientTypeDetails; # Keep original for potential future use
+                                SortOrder    = $sortOrder
+                            }
+                        )
+                    } # End of foreach ($mbx in $allMailboxes)
 
                     # Sort mailboxes alphabetically by Type and then by Address
-                    $sortedMailboxes = $filteredMailboxes | Sort-Object Type, Address
+                    $sortedMailboxes = $filteredMailboxes | Sort-Object SortOrder, Address
 
                     $SyncHash.Window.Dispatcher.Invoke({
                             Write-Host "[$(Get-Date -f HH:mm:ss)] Loaded $($sortedMailboxes.Count) mailboxes into sections." -ForegroundColor Gray
@@ -392,6 +408,9 @@ $ListMailboxes.Add_SelectionChanged({
         # UI sofort leeren (auf dem Main Thread)
         $GridMbxPerms.Items.Clear()
         $GridCalPerms.Items.Clear()
+        
+        $StatusMbx.Text = "(Fetching...)"
+        $StatusCal.Text = "(Fetching...)"
 
         # Daten für den Hintergrund-Task vorbereiten
         $SyncHash.SelectedMbx = $mbxAddress
@@ -415,6 +434,7 @@ $ListMailboxes.Add_SelectionChanged({
                                 $userDisp = if ($p.User -eq "NT AUTHORITY\SELF") { $targetMbx } else { $p.User }
                                 $SyncHash.GridMbxPerms.Items.Add([PSCustomObject]@{User = $userDisp; AccessRights = ($p.AccessRights -join ', ') }) | Out-Null
                             }
+                            $SyncHash.StatusMbx.Text = ""
                         }, $mbx, $mbxPerms, $mCount)
 
                     Write-Host "[$(Get-Date -f HH:mm:ss)] DEBUG: Locating calendar folder for $mbx..." -ForegroundColor Gray
@@ -423,7 +443,10 @@ $ListMailboxes.Add_SelectionChanged({
                     
                     if ($null -eq $rawCalFolders -or $rawCalFolders.Count -eq 0) {
                         Write-Host "[$(Get-Date -f HH:mm:ss)] DEBUG: Get-EXOMailboxFolderStatistics returned no folders for $mbx." -ForegroundColor Gray
-                        $SyncHash.Window.Dispatcher.Invoke({ Write-Host "[$(Get-Date -f HH:mm:ss)] WARNING: No calendar folder found for $mbx" -ForegroundColor Yellow })
+                        $SyncHash.Window.Dispatcher.Invoke({ 
+                                Write-Host "[$(Get-Date -f HH:mm:ss)] WARNING: No calendar folder found for $mbx" -ForegroundColor Yellow 
+                                $SyncHash.StatusCal.Text = "(Not Found)"
+                            })
                     }
                     else {
                         Write-Host "[$(Get-Date -f HH:mm:ss)] DEBUG: Get-EXOMailboxFolderStatistics returned $($rawCalFolders.Count) items for $mbx." -ForegroundColor Gray
@@ -442,17 +465,25 @@ $ListMailboxes.Add_SelectionChanged({
                                         $userDisp = if ($p.User.UserPrincipalName) { $p.User.UserPrincipalName } else { $p.User.ToString() -split ":" | Select-Object -Last 1 }
                                         $SyncHash.GridCalPerms.Items.Add([PSCustomObject]@{User = $userDisp; AccessRights = ($p.AccessRights -join ', ') }) | Out-Null
                                     }
+                                    $SyncHash.StatusCal.Text = ""
                                 }, $calFolder.Name, $calPerms, $cCount)
                         }
                         else {
                             # This case means rawCalFolders had items, but none matched FolderType -match "Calendar"
-                            $SyncHash.Window.Dispatcher.Invoke({ Write-Host "[$(Get-Date -f HH:mm:ss)] WARNING: No 'Calendar' type folder found among returned folders for $mbx" -ForegroundColor Yellow })
+                            $SyncHash.Window.Dispatcher.Invoke({ 
+                                    Write-Host "[$(Get-Date -f HH:mm:ss)] WARNING: No 'Calendar' type folder found among returned folders for $mbx" -ForegroundColor Yellow 
+                                    $SyncHash.StatusCal.Text = "(Not Found)"
+                                })
                         }
                     }
                 }
                 catch {
                     $err = $_.Exception.Message
-                    $SyncHash.Window.Dispatcher.Invoke({ Write-Host "[$(Get-Date -f HH:mm:ss)] ERROR fetching perms for $mbx : $err" -ForegroundColor Red })
+                    $SyncHash.Window.Dispatcher.Invoke({ 
+                            Write-Host "[$(Get-Date -f HH:mm:ss)] ERROR fetching perms for $mbx : $err" -ForegroundColor Red 
+                            $SyncHash.StatusMbx.Text = "(Error)"
+                            $SyncHash.StatusCal.Text = "(Error)"
+                        })
                 }
             })
         $PsPerms.RunspacePool = $Pool
