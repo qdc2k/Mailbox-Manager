@@ -93,12 +93,35 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
             <Setter Property="Background" Value="#2D2D30"/>
             <Setter Property="Foreground" Value="#E0E0E0"/>
             <Setter Property="BorderBrush" Value="#3F3F46"/>
-            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="BorderThickness" Value="0,0,1,1"/>
             <Setter Property="Padding" Value="5,2"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="FontFamily" Value="Segoe UI"/>
             <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type GridViewColumnHeader}">
+                        <Grid>
+                            <Border Name="HeaderBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                            </Border>
+                            <Thumb x:Name="PART_HeaderGripper" HorizontalAlignment="Right" Margin="0,0,-5,0" Width="10" Background="Transparent" Cursor="SizeWE">
+                                <Thumb.Template>
+                                    <ControlTemplate TargetType="{x:Type Thumb}">
+                                        <Border Background="Transparent" />
+                                    </ControlTemplate>
+                                </Thumb.Template>
+                            </Thumb>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="HeaderBorder" Property="Background" Value="#3E3E42"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <!-- Custom ScrollViewer Style for Dark Theme -->
@@ -199,17 +222,20 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
 
         <!-- Top Connection Bar -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
-            <Button Name="BtnConnect" Content="Connect to Exchange" Height="30" Width="180" Background="#007ACC" Foreground="White" BorderThickness="0" Cursor="Hand" FontWeight="Bold" Margin="0,0,20,0"/>
+            <Button Name="BtnConnect" Content="Connect to Exchange" Height="45" Width="150" Background="#007ACC" Foreground="White" BorderThickness="0" Cursor="Hand" FontWeight="Bold" Margin="0,0,20,0"/>
             
             <CheckBox Name="ChkDelegated" Content="Use Delegated Authentication:" VerticalAlignment="Center" Foreground="#E0E0E0" Margin="0,0,5,0"/>
             <TextBox Name="TxtDelegatedOrg" Width="100" Height="25" Background="#2D2D30" Foreground="White" BorderBrush="#3F3F46" VerticalContentAlignment="Center" Padding="5,0" IsEnabled="False" Margin="0,0,5,0"/>
             <TextBlock Text="(z.B. zkj.ch)" VerticalAlignment="Center" Foreground="#CCCCCC" FontStyle="Italic"/>
         </StackPanel>
 
+        <!-- Row 1 left empty as requested -->
+        <Grid Grid.Row="1" Height="25" Margin="0,0,0,15"/>
+
         <!-- Main Content Area -->
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="360" MinWidth="150"/>
+                <ColumnDefinition Width="285" MinWidth="150"/>
                 <ColumnDefinition Width="5"/>
                 <ColumnDefinition Width="*" MinWidth="400"/>
             </Grid.ColumnDefinitions>
@@ -222,7 +248,6 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <!-- Mailboxes Title -->
                     <Grid Grid.Row="0" Margin="10,10,10,5">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="Mailboxes" FontWeight="Bold" Foreground="#007ACC" FontSize="15"/>
@@ -233,11 +258,11 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                     <!-- Search Bar (new position) -->
                     <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="10,0,10,10">
                         <TextBlock Text="Search:" VerticalAlignment="Center" Foreground="#E0E0E0" Margin="0,0,5,0"/>
-                        <TextBox Name="TxtSearchMailbox" Width="210" Height="25" Background="#2D2D30" Foreground="White" BorderBrush="#3F3F46" VerticalContentAlignment="Center" Padding="5,0" ToolTip="Search by Address or Type"/>
+                        <TextBox Name="TxtSearchMailbox" Width="160" Height="25" Background="#2D2D30" Foreground="White" BorderBrush="#3F3F46" VerticalContentAlignment="Center" Padding="5,0" ToolTip="Search by Address or Type"/>
                         <Button Name="BtnClearSearch" Content="Clear" Height="25" Width="50" Background="#555555" Foreground="White" BorderThickness="0" Margin="5,0,0,0"/>
                     </StackPanel>
 
-                    <ListView Name="ListMailboxes" Grid.Row="2" Background="Transparent" BorderThickness="0" Margin="5" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListView Name="ListMailboxes" Grid.Row="2" Background="Transparent" BorderThickness="0" Margin="5" ScrollViewer.HorizontalScrollBarVisibility="Disabled" SelectionMode="Single">
                         <ListView.View>
                             <GridView>
                                 <GridView.ColumnHeaderContainerStyle>
@@ -245,7 +270,7 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                                         <Setter Property="Visibility" Value="Collapsed" />
                                     </Style>
                                 </GridView.ColumnHeaderContainerStyle>
-                                <GridViewColumn DisplayMemberBinding="{Binding Address}" Width="330"/>
+                                <GridViewColumn DisplayMemberBinding="{Binding Address}" Width="255"/>
                             </GridView>
                         </ListView.View>
                         <ListView.GroupStyle>
@@ -304,7 +329,7 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                                 <Button Name="BtnRemoveMbx" Content="Remove" Height="22" Width="75" Margin="5,0,0,0" Background="#FF6B68" Foreground="White" BorderThickness="0" FontSize="11" Cursor="Hand" FontWeight="Bold"/>
                             </StackPanel>
                         </Grid>
-                        <ListView Name="GridMbxPerms" Grid.Row="1" Background="Transparent" Foreground="#E0E0E0" BorderThickness="0" Margin="5,0,5,5">
+                        <ListView Name="GridMbxPerms" Grid.Row="1" Background="Transparent" Foreground="#E0E0E0" BorderThickness="0" Margin="5,0,5,5" SelectionMode="Single">
                             <ListView.View>
                                 <GridView>
                                     <GridViewColumn Header="User (UPN)" Width="250" DisplayMemberBinding="{Binding User}"/>
@@ -337,7 +362,7 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                                 <Button Name="BtnRemoveCal" Content="Remove" Height="22" Width="75" Margin="5,0,0,0" Background="#FF6B68" Foreground="White" BorderThickness="0" FontSize="11" Cursor="Hand" FontWeight="Bold"/>
                             </StackPanel>
                         </Grid>
-                        <ListView Name="GridCalPerms" Grid.Row="1" Background="Transparent" Foreground="#E0E0E0" BorderThickness="0" Margin="5,0,5,5">
+                        <ListView Name="GridCalPerms" Grid.Row="1" Background="Transparent" Foreground="#E0E0E0" BorderThickness="0" Margin="5,0,5,5" SelectionMode="Single">
                             <ListView.View>
                                 <GridView>
                                     <GridViewColumn Header="User (UPN)" Width="250" DisplayMemberBinding="{Binding User}"/>
@@ -961,6 +986,20 @@ $ChkDelegated.Add_Unchecked({ $TxtDelegatedOrg.IsEnabled = $false })
 
 # --- Event: Connect & Fetch Mailboxes (ASYNC) ---
 $BtnConnect.Add_Click({
+        # Handle Disconnection if already connected
+        if ($BtnConnect.Background.ToString() -eq "#FF28A745") {
+            # Success Green
+            Disconnect-ExchangeOnline -Confirm:$false
+            $BtnConnect.Content = "Connect to Exchange"
+            $BtnConnect.Background = "#007ACC" # Blue
+            $SyncHash.AllMailboxes.Clear()
+            $SyncHash.GridMbxPerms.Items.Clear()
+            $SyncHash.GridCalPerms.Items.Clear()
+            $SyncHash.StatusMailboxes.Text = ""
+            Write-Host "[$(Get-Date -f HH:mm:ss)] Disconnected from Exchange Online." -ForegroundColor Yellow
+            return
+        }
+
         $BtnConnect.IsHitTestVisible = $false
         $BtnConnect.Content = "Connecting..."
         $BtnConnect.Background = "#FFD700" # Gold
@@ -996,9 +1035,21 @@ $BtnConnect.Add_Click({
 
                     # Update UI to Connected
                     $SyncHash.Window.Dispatcher.Invoke({
-                            $SyncHash.BtnConnect.Content = "Connected"
+                            # Create multi-line content for the button
+                            $sp = New-Object System.Windows.Controls.StackPanel
+                            $txt1 = New-Object System.Windows.Controls.TextBlock -Property @{
+                                Text = "Connected"; FontWeight = "Bold"; HorizontalAlignment = "Center"
+                            }
+                            $txt2 = New-Object System.Windows.Controls.TextBlock -Property @{
+                                Text = "(click to disconnect)"; FontSize = 11; HorizontalAlignment = "Center"
+                            }
+                            $null = $sp.Children.Add($txt1)
+                            $null = $sp.Children.Add($txt2)
+                            
+                            $SyncHash.BtnConnect.Content = $sp
                             $SyncHash.BtnConnect.Background = "#28A745" # Success Green
                             $SyncHash.BtnConnect.Foreground = "White"
+                            $SyncHash.BtnConnect.IsHitTestVisible = $true
                             $SyncHash.StatusMailboxes.Text = "(Fetching...)"
                         })
 
