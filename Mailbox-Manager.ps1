@@ -60,6 +60,26 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                 <TextBlock>• Reviewer: ReadItems, FolderVisible</TextBlock>
             </StackPanel>
         </ToolTip>
+
+        <!-- Modern Business Styles -->
+        <Style TargetType="ListViewItem">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="Padding" Value="2"/>
+        </Style>
+
+        <Style TargetType="{x:Type GridViewColumnHeader}">
+            <Setter Property="Background" Value="#2D2D30"/>
+            <Setter Property="Foreground" Value="#E0E0E0"/>
+            <Setter Property="BorderBrush" Value="#3F3F46"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="Padding" Value="5,2"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        </Style>
     </Window.Resources>
 
     <Grid Margin="15">
@@ -99,13 +119,8 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <TextBlock Text="Mailboxes" FontWeight="Bold" Margin="10" Foreground="#007ACC"/>
-                    <ListView Name="ListMailboxes" Grid.Row="1" Background="Transparent" Foreground="#E0E0E0" BorderThickness="0" Margin="5" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                        <ListView.View>
-                            <GridView>
-                                <GridViewColumn Header="Email Address" Width="450" DisplayMemberBinding="{Binding Address}"/>
-                            </GridView>
-                        </ListView.View>
+                    <TextBlock Text="Mailboxes" FontWeight="Bold" Margin="10" Foreground="#007ACC" FontSize="14"/>
+                    <ListView Name="ListMailboxes" Grid.Row="1" Background="Transparent" BorderThickness="0" Margin="5" ScrollViewer.HorizontalScrollBarVisibility="Disabled" DisplayMemberPath="Address">
                         <ListView.GroupStyle>
                             <GroupStyle>
                                 <GroupStyle.ContainerStyle>
@@ -115,7 +130,7 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                                                 <ControlTemplate TargetType="{x:Type GroupItem}">
                                                     <Expander IsExpanded="True" Background="#333337" BorderBrush="#3F3F46" BorderThickness="0,0,0,1" Margin="0,0,0,5">
                                                         <Expander.Header>
-                                                            <TextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="#007ACC" Margin="5,2" FontSize="14"/>
+                                                            <TextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="#007ACC" Margin="5,2" FontSize="13"/>
                                                         </Expander.Header>
                                                         <ItemsPresenter />
                                                     </Expander>
@@ -141,7 +156,7 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                 <!-- Mailbox Permissions -->
                 <Border Grid.Row="0" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="3" Margin="0,0,0,10">
                     <Grid Background="#252526">
-                        <TextBlock Text="Mailbox Permissions" FontWeight="Bold" Margin="10,10,0,0" Foreground="#007ACC"/>
+                        <TextBlock Text="Mailbox Permissions" FontWeight="Bold" Margin="10,10,0,0" Foreground="#007ACC" FontSize="14"/>
                         <ListView Name="GridMbxPerms" Background="Transparent" Foreground="#E0E0E0" BorderThickness="0" Margin="5,35,5,5">
                             <ListView.View>
                                 <GridView>
@@ -157,7 +172,7 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                 <Border Grid.Row="1" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="3" Margin="0,0,0,10">
                     <Grid Background="#252526">
                         <StackPanel Orientation="Horizontal" Margin="10,10,0,0">
-                            <TextBlock Text="Calendar Permissions" FontWeight="Bold" Foreground="#007ACC"/>
+                            <TextBlock Text="Calendar Permissions" FontWeight="Bold" Foreground="#007ACC" FontSize="14"/>
                             <TextBlock Text=" [?] Hover for Info" Foreground="#AAAAAA" Cursor="Help" ToolTip="{StaticResource CalendarRolesTooltip}" Margin="10,0,0,0"/>
                         </StackPanel>
                         <ListView Name="GridCalPerms" Background="Transparent" Foreground="#E0E0E0" BorderThickness="0" Margin="5,35,5,5">
@@ -174,7 +189,7 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                 <!-- Action Panel -->
                 <Border Grid.Row="2" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="3" Background="#252526" Padding="10">
                     <StackPanel>
-                        <TextBlock Text="Manage Access (Selected Context)" FontWeight="Bold" Foreground="#007ACC" Margin="0,0,0,10"/>
+                        <TextBlock Text="Manage Access (Selected Context)" FontWeight="Bold" Foreground="#007ACC" Margin="0,0,0,10" FontSize="14"/>
                         <StackPanel Orientation="Horizontal">
                             <TextBox Name="TxtUserUpn" Width="200" Height="25" Background="#2D2D30" Foreground="White" BorderBrush="#3F3F46" Margin="0,0,10,0" ToolTip="Enter UPN to Add/Change"/>
                             <ComboBox Name="ComboRights" Width="150" Height="25" Background="#2D2D30" Foreground="White" BorderBrush="#3F3F46" Margin="0,0,10,0"/>
@@ -388,31 +403,52 @@ $ListMailboxes.Add_SelectionChanged({
                 $mbx = $SyncHash.SelectedMbx
         
                 try {
+                    Write-Host "[$(Get-Date -f HH:mm:ss)] DEBUG: Fetching mailbox permissions for $mbx..." -ForegroundColor Gray
                     # 1. Mailbox Permissions
                     $mbxPerms = Get-EXOMailboxPermission -Identity $mbx | Where-Object { ($_.User -eq "NT AUTHORITY\SELF" -or $_.User -notlike "NT AUTHORITY\*") -and ($_.IsInherited -eq $false) }
-                    $SyncHash.Window.Dispatcher.Invoke({
-                            Write-Host "[$(Get-Date -f HH:mm:ss)] Loaded $($mbxPerms.Count) mailbox permissions." -ForegroundColor Gray
-                            foreach ($p in $mbxPerms) {
-                                $userDisp = if ($p.User -eq "NT AUTHORITY\SELF") { $mbx } else { $p.User }
+                    $mCount = @($mbxPerms).Count
+                    
+                    $SyncHash.Window.Dispatcher.Invoke([Action[string, object, int]] {
+                            param($targetMbx, $perms, $count)
+                            Write-Host "[$(Get-Date -f HH:mm:ss)] Loaded $count mailbox permissions." -ForegroundColor Gray
+                            foreach ($p in $perms) {
+                                $userDisp = if ($p.User -eq "NT AUTHORITY\SELF") { $targetMbx } else { $p.User }
                                 $SyncHash.GridMbxPerms.Items.Add([PSCustomObject]@{User = $userDisp; AccessRights = ($p.AccessRights -join ', ') }) | Out-Null
                             }
-                        })
+                        }, $mbx, $mbxPerms, $mCount)
 
+                    Write-Host "[$(Get-Date -f HH:mm:ss)] DEBUG: Locating calendar folder for $mbx..." -ForegroundColor Gray
                     # 2. Kalender-Berechtigungen (Robuste Erkennung via FolderType)
-                    $calFolder = Get-MailboxFolderStatistics -Identity $mbx -FolderScope Calendar | Where-Object { $_.FolderType -match "Calendar" } | Select-Object -First 1
-                    if ($calFolder) {
-                        $calPath = "$($mbx):\$($calFolder.Name)"
-                        $calPerms = Get-MailboxFolderPermission -Identity $calPath
-                
-                        $SyncHash.Window.Dispatcher.Invoke({
-                                Write-Host "[$(Get-Date -f HH:mm:ss)] Found calendar folder: $($calFolder.Name). Loaded $($calPerms.Count) permissions." -ForegroundColor Gray
-                                foreach ($p in $calPerms) {
-                                    $userDisp = if ($p.User.UserPrincipalName) { $p.User.UserPrincipalName } else { $p.User.ToString() -split ":" | Select-Object -Last 1 }
-                                    $SyncHash.GridCalPerms.Items.Add([PSCustomObject]@{User = $userDisp; AccessRights = ($p.AccessRights -join ', ') }) | Out-Null
-                                }
-                            })
+                    $rawCalFolders = Get-EXOMailboxFolderStatistics -Identity $mbx -FolderScope Calendar -ErrorAction Stop
+                    
+                    if ($null -eq $rawCalFolders -or $rawCalFolders.Count -eq 0) {
+                        Write-Host "[$(Get-Date -f HH:mm:ss)] DEBUG: Get-EXOMailboxFolderStatistics returned no folders for $mbx." -ForegroundColor Gray
+                        $SyncHash.Window.Dispatcher.Invoke({ Write-Host "[$(Get-Date -f HH:mm:ss)] WARNING: No calendar folder found for $mbx" -ForegroundColor Yellow })
                     }
-                    else { $SyncHash.Window.Dispatcher.Invoke({ Write-Host "[$(Get-Date -f HH:mm:ss)] WARNING: No calendar folder found for $mbx" -ForegroundColor Yellow }) }
+                    else {
+                        Write-Host "[$(Get-Date -f HH:mm:ss)] DEBUG: Get-EXOMailboxFolderStatistics returned $($rawCalFolders.Count) items for $mbx." -ForegroundColor Gray
+                        $calFolder = $rawCalFolders | Where-Object { $_.FolderType -match "Calendar" } | Select-Object -First 1
+                        
+                        if ($calFolder) {
+                            Write-Host "[$(Get-Date -f HH:mm:ss)] DEBUG: Found calendar folder '$($calFolder.Name)' for $mbx. Fetching permissions..." -ForegroundColor Gray
+                            $calPath = "$($mbx):\$($calFolder.Name)"
+                            $calPerms = Get-EXOMailboxFolderPermission -Identity $calPath -ErrorAction Stop
+                            $cCount = @($calPerms).Count
+                    
+                            $SyncHash.Window.Dispatcher.Invoke([Action[string, object, int]] {
+                                    param($fName, $perms, $count)
+                                    Write-Host "[$(Get-Date -f HH:mm:ss)] Found calendar folder: $fName. Loaded $count permissions." -ForegroundColor Gray
+                                    foreach ($p in $perms) {
+                                        $userDisp = if ($p.User.UserPrincipalName) { $p.User.UserPrincipalName } else { $p.User.ToString() -split ":" | Select-Object -Last 1 }
+                                        $SyncHash.GridCalPerms.Items.Add([PSCustomObject]@{User = $userDisp; AccessRights = ($p.AccessRights -join ', ') }) | Out-Null
+                                    }
+                                }, $calFolder.Name, $calPerms, $cCount)
+                        }
+                        else {
+                            # This case means rawCalFolders had items, but none matched FolderType -match "Calendar"
+                            $SyncHash.Window.Dispatcher.Invoke({ Write-Host "[$(Get-Date -f HH:mm:ss)] WARNING: No 'Calendar' type folder found among returned folders for $mbx" -ForegroundColor Yellow })
+                        }
+                    }
                 }
                 catch {
                     $err = $_.Exception.Message
