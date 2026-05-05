@@ -305,7 +305,13 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
 
                     <!-- ListView with Mailbox List -->
                     <Grid Grid.Row="2" Margin="5">
-                            <ListView Name="ListMailboxes" Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" SelectionMode="Single">
+                            <ListView Name="ListMailboxes" Background="Transparent" BorderThickness="0" 
+                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled" SelectionMode="Single"
+                                      VirtualizingPanel.IsVirtualizing="True"
+                                      VirtualizingPanel.IsVirtualizingWhenGrouping="True"
+                                      VirtualizingPanel.ScrollUnit="Pixel"
+                                      VirtualizingPanel.CacheLengthUnit="Item"
+                                      VirtualizingPanel.CacheLength="20,20">
                                 <ListView.View>
                                     <GridView>
                                         <GridView.ColumnHeaderContainerStyle>
@@ -1352,6 +1358,8 @@ $BtnConnect.Add_Click({
         $SyncHash.TargetUPN = $UserUPN
         $SyncHash.FetchAllMailboxes = $FetchAll
 
+        # Move window to the right to ensure the login prompt is visible
+        $Window.Dispatcher.Invoke([Action] { $Window.Left = $Window.Left + 300 })
         $PowerShell = [powershell]::Create().AddScript({
                 param($Delegated, $Org, $UserUPN, $SyncHash, $FetchAll)
                 Import-Module ExchangeOnlineManagement
