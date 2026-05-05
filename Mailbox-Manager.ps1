@@ -533,6 +533,7 @@ $SyncHash.GridMbxPerms = $GridMbxPerms
 $SyncHash.GridCalPerms = $GridCalPerms
 $SyncHash.AllMailboxes = [System.Collections.ObjectModel.ObservableCollection[object]]::new()
 $SyncHash.FetchedUPNs = [System.Collections.ObjectModel.ObservableCollection[string]]::new()
+$SyncHash.AddressCache = [System.Collections.Generic.List[string]]::new()
 
 # --- Load Saved Settings ---
 if (Test-Path $settingsFile) {
@@ -888,9 +889,9 @@ $SyncHash.GetPermissionsAsync = {
             try {
                 if ($doMbx) {
                     Write-Host "[$(Get-Date -f HH:mm:ss)] DEBUG: Fetching mailbox & send permissions for $mbx..." -ForegroundColor Gray
-                    $mbxPerms = Get-EXOMailboxPermission -Identity $mbx | Where-Object { ($_.User -match "SELF" -or $_.User -notlike "NT AUTHORITY\*") -and ($_.IsInherited -eq $false) }
-                    $recPerms = Get-EXORecipientPermission -Identity $mbx | Where-Object { $_.Trustee -match "SELF" -or $_.Trustee -notlike "NT AUTHORITY\*" }
-                    $mbxObj = Get-EXOMailbox -Identity $mbx -Properties GrantSendOnBehalfTo
+                    $mbxPerms = Get-MailboxPermission -Identity $mbx | Where-Object { ($_.User -match "SELF" -or $_.User -notlike "NT AUTHORITY\*") -and ($_.IsInherited -eq $false) }
+                    $recPerms = Get-RecipientPermission -Identity $mbx | Where-Object { $_.Trustee -match "SELF" -or $_.Trustee -notlike "NT AUTHORITY\*" }
+                    $mbxObj = Get-Mailbox -Identity $mbx
 
                     $usersHash = [ordered]@{}
                     
@@ -942,7 +943,7 @@ $SyncHash.GetPermissionsAsync = {
 
                 if ($doCal) {
                     Write-Host "[$(Get-Date -f HH:mm:ss)] DEBUG: Locating calendar folder for $mbx..." -ForegroundColor Gray
-                    $rawCalFolders = Get-EXOMailboxFolderStatistics -Identity $mbx -FolderScope Calendar -ErrorAction Stop
+                    $rawCalFolders = Get-MailboxFolderStatistics -Identity $mbx -FolderScope Calendar -ErrorAction Stop
 
                     if ($null -eq $rawCalFolders -or $rawCalFolders.Count -eq 0) {
                         $SyncHash.Window.Dispatcher.Invoke({ 
@@ -955,7 +956,7 @@ $SyncHash.GetPermissionsAsync = {
                         if ($calFolder) {
                             Write-Host "[$(Get-Date -f HH:mm:ss)] DEBUG: Found calendar folder '$($calFolder.Name)' for $mbx. Fetching permissions..." -ForegroundColor Gray
                             $calPath = "$($mbx):\$($calFolder.Name)"
-                            $calPerms = Get-EXOMailboxFolderPermission -Identity $calPath -ErrorAction Stop | Where-Object { $_.User -notlike "NT AUTHORITY\*" }
+                            $calPerms = Get-MailboxFolderPermission -Identity $calPath -ErrorAction Stop | Where-Object { $_.User -notlike "NT AUTHORITY\*" }
                             $cCount = @($calPerms).Count
                     
                             $SyncHash.Window.Dispatcher.Invoke({
@@ -1052,7 +1053,7 @@ function Update-PermissionAsync {
                 }
                 else {
                     # Calendar
-                    $raw = Get-EXOMailboxFolderStatistics -Identity $mbx -FolderScope Calendar
+                    $raw = Get-MailboxFolderStatistics -Identity $mbx -FolderScope Calendar
                     $folder = $raw | Where-Object { $_.FolderType -eq "Calendar" -or $_.Name -eq "Calendar" } | Select-Object -First 1
                     if (-not $folder) { throw "Calendar folder not found for $mbx" }
 
@@ -1137,7 +1138,7 @@ function Remove-PermissionAsync {
                 }
                 else {
                     # Calendar
-                    $raw = Get-EXOMailboxFolderStatistics -Identity $mbx -FolderScope Calendar
+                    $raw = Get-MailboxFolderStatistics -Identity $mbx -FolderScope Calendar
                     $folder = $raw | Where-Object { $_.FolderType -eq "Calendar" -or $_.Name -eq "Calendar" } | Select-Object -First 1
                     if (-not $folder) { throw "Calendar folder not found for $mbx" }
 
@@ -1194,7 +1195,7 @@ $calendarRoles = @("None", "AvailabilityOnly", "LimitedDetails", "Author", "Cont
 
 $BtnAddMbx.Add_Click({
         Write-Host "[$(Get-Date -f HH:mm:ss)] BtnAddMbx clicked." -ForegroundColor Magenta
-        $userList = $SyncHash.AllMailboxes | Select-Object -ExpandProperty Address
+        $userList = $SyncHash.AddressCache
         $res = Show-PermissionDialog -Title "Add Mailbox Permission" -Options $mailboxRights -Label "Access Rights:" -ShowSendRights $true -UserList $userList
         if ($res) { Update-PermissionAsync -Type "Mailbox" -Action "Add" -Data $res } else { Write-Host "[$(Get-Date -f HH:mm:ss)] Show-PermissionDialog for AddMbx returned null." -ForegroundColor Yellow }
     })
@@ -1222,7 +1223,7 @@ $BtnEditMbx.Add_Click({
         if (-not $sel) { [System.Windows.MessageBox]::Show("Please select a user from the list."); return }
         # Extract the first access right for display in the dropdown
         $currentRight = ($sel.AccessRights -split "," | Select-Object -First 1 | ForEach-Object { $_.Trim() })
-        $userList = $SyncHash.AllMailboxes | Select-Object -ExpandProperty Address
+        $userList = $SyncHash.AddressCache
         $res = Show-PermissionDialog -Title "Edit Mailbox Permission" -User $sel.User -Options $mailboxRights -CurrentOption $currentRight -CurrentAutomapping "" -UserEditable $false -Label "Access Rights:" -ShowSendRights $true -CurrentSendRights $sel.SendRights -UserList $userList
         if ($res) { Update-PermissionAsync -Type "Mailbox" -Action "Edit" -Data $res -OldRights $sel.AccessRights -OldSendRights $sel.SendRights } else { Write-Host "[$(Get-Date -f HH:mm:ss)] Show-PermissionDialog for EditMbx returned null." -ForegroundColor Yellow }
     })
@@ -1238,7 +1239,7 @@ $BtnRemoveMbx.Add_Click({
 
 $BtnAddCal.Add_Click({
         Write-Host "[$(Get-Date -f HH:mm:ss)] BtnAddCal clicked." -ForegroundColor Magenta
-        $userList = $SyncHash.AllMailboxes | Select-Object -ExpandProperty Address
+        $userList = $SyncHash.AddressCache
         $res = Show-PermissionDialog -Title "Add Calendar Permission" -Options $calendarRoles -Label "Access Roles:" -ShowAutomapping $false -UserList $userList
         if ($res) { Update-PermissionAsync -Type "Calendar" -Action "Add" -Data $res } else { Write-Host "[$(Get-Date -f HH:mm:ss)] Show-PermissionDialog for AddCal returned null." -ForegroundColor Yellow }
     })
@@ -1248,7 +1249,7 @@ $BtnEditCal.Add_Click({
         $sel = $GridCalPerms.SelectedItem
         if (-not $sel) { [System.Windows.MessageBox]::Show("Please select a user from the list."); return }
         $currentRole = $sel.AccessRights -split "," | Select-Object -First 1 | ForEach-Object { $_.Trim() }
-        $userList = $SyncHash.AllMailboxes | Select-Object -ExpandProperty Address
+        $userList = $SyncHash.AddressCache
         $res = Show-PermissionDialog -Title "Edit Calendar Permission" -User $sel.User -Options $calendarRoles -CurrentOption $currentRole -UserEditable $false -Label "Access Roles:" -ShowAutomapping $false -UserList $userList
         if ($res) { Update-PermissionAsync -Type "Calendar" -Action "Edit" -Data $res } else { Write-Host "[$(Get-Date -f HH:mm:ss)] Show-PermissionDialog for EditCal returned null." -ForegroundColor Yellow }
     })
@@ -1322,6 +1323,7 @@ $BtnConnect.Add_Click({
             Disconnect-ExchangeOnline -Confirm:$false
             $BtnConnect.Content = "Connect to Exchange"
             $BtnConnect.Background = "#007ACC" # Blue
+            $SyncHash.AddressCache.Clear()
             $SyncHash.AllMailboxes.Clear()
             $SyncHash.GridMbxPerms.Items.Clear()
             $SyncHash.GridCalPerms.Items.Clear()
@@ -1418,6 +1420,7 @@ $BtnConnect.Add_Click({
 
                         # Filter and categorize mailboxes
                         $filteredMailboxes = [System.Collections.ArrayList]::new()
+                        $addressCache = [System.Collections.Generic.List[string]]::new()
                         foreach ($mbx in $allMailboxes) {
                             $currentIndex++
                             $progressPercent = [math]::Min(100, [math]::Round(($currentIndex / $totalCount) * 100))
@@ -1438,6 +1441,8 @@ $BtnConnect.Add_Click({
                                 "Other" { 4 }
                                 Default { 99 }
                             }
+
+                            $addressCache.Add($mbx.PrimarySmtpAddress)
 
                             $null = $filteredMailboxes.Add([PSCustomObject]@{
                                     Address      = $mbx.PrimarySmtpAddress;
@@ -1462,12 +1467,20 @@ $BtnConnect.Add_Click({
                         $SyncHash.Window.Dispatcher.Invoke({
                                 Write-Host "[$(Get-Date -f HH:mm:ss)] Loaded $($sortedMailboxes.Count) mailboxes into sections." -ForegroundColor Gray
 
-                                # Update ObservableCollection
-                                $SyncHash.AllMailboxes.Clear()
-                                foreach ($item in $sortedMailboxes) { $SyncHash.AllMailboxes.Add($item) }
+                                # Update collections and address cache for dialogs
+                                $newCollection = [System.Collections.ObjectModel.ObservableCollection[object]]::new()
+                                foreach ($item in $sortedMailboxes) { $newCollection.Add($item) }
+                                $SyncHash.AllMailboxes = $newCollection
+                                $SyncHash.AddressCache = $addressCache
 
-                                # Refresh the view
+                                # Re-setup the view for the new collection instance
                                 $view = [System.Windows.Data.CollectionViewSource]::GetDefaultView($SyncHash.AllMailboxes)
+                                $view.GroupDescriptions.Add((New-Object System.Windows.Data.PropertyGroupDescription("Type")))
+                                $view.SortDescriptions.Add((New-Object System.ComponentModel.SortDescription("SortOrder", [System.ComponentModel.ListSortDirection]::Ascending)))
+                                $view.SortDescriptions.Add((New-Object System.ComponentModel.SortDescription("Address", [System.ComponentModel.ListSortDirection]::Ascending)))
+
+                                # Re-bind the ItemsSource
+                                $SyncHash.ListMailboxes.ItemsSource = $view
                                 $view.Refresh()
 
                                 $SyncHash.StatusMailboxes.Text = ""
@@ -1588,6 +1601,7 @@ $BtnFetchUPN.Add_Click({
                             
                             if (-not $existing) {
                                 $SyncHash.AllMailboxes.Add($mailboxObj)
+                                $SyncHash.AddressCache.Add($mailboxObj.Address)
                                 $SyncHash.ListMailboxes.SelectedItem = $mailboxObj
                                 Write-Host "[$(Get-Date -f HH:mm:ss)] Added mailbox: $($mailboxObj.Address)" -ForegroundColor Green
                             }
