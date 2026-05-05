@@ -779,8 +779,8 @@ function Show-PermissionDialog {
     $script:DiagResult = $null
     $bSave.Add_Click({
             $upn = $cUser.Text.Trim()
-            # Validation: Allow Default, Anonymous, or valid email format
-            if ($upn -eq "Default" -or $upn -eq "Anonymous" -or $upn -match '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$') {
+            # Validation: Allow Default, Anonymous, Standard (German), or valid email format
+            if ($upn -eq "Default" -or $upn -eq "Anonymous" -or $upn -eq "Standard" -or $upn -match '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$') {
                 if ($cRights.SelectedItem) {
                     $selectedRights = $cRights.SelectedItem
                     $selectedSend = if ($ShowSendRights) { $cSendRights.SelectedItem } else { "None" }
@@ -810,7 +810,7 @@ function Show-PermissionDialog {
                 }
                 else { [System.Windows.MessageBox]::Show("Please select access rights.") }
             }
-            else { [System.Windows.MessageBox]::Show("Please enter a valid UPN (e.g. user@domain.com) or use 'Default' / 'Anonymous'.") }
+            else { [System.Windows.MessageBox]::Show("Please enter a valid UPN (e.g. user@domain.com) or use 'Default' / 'Anonymous' / 'Standard'.") }
         })
     $bCancel.Add_Click({ $diag.Close() })
 
@@ -966,6 +966,7 @@ $SyncHash.GetPermissionsAsync = {
                                         $userDisp = if ($p.User.UserPrincipalName) { $p.User.UserPrincipalName }
                                         elseif ($p.User.ToString() -match "Default") { "Default" }
                                         elseif ($p.User.ToString() -match "Anonymous") { "Anonymous" }
+                                        elseif ($p.User.ToString() -match "Standard") { "Standard" }
                                         else { $p.User.ToString() -split ":" | Select-Object -Last 1 }
                                         $SyncHash.GridCalPerms.Items.Add([PSCustomObject]@{User = $userDisp; AccessRights = ($p.AccessRights -join ', ') }) | Out-Null
                                     }
