@@ -123,6 +123,11 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+            <Style.Triggers>
+                <Trigger Property="Content" Value="{x:Null}">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
         <!-- Custom ScrollViewer Style for Dark Theme -->
@@ -367,10 +372,7 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                         <Grid Grid.Row="0" Margin="10,10,10,5">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="380"/>
-                            </Grid.ColumnDefinitions>
+                            <!-- Removed second column definition to extend width -->
                             <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                                 <TextBlock Text="Mailbox Permissions" FontWeight="Bold" Foreground="#007ACC" FontSize="15" Width="150" VerticalAlignment="Center"/>
                                 <Button Name="BtnAddMbx" Content="Add" Height="22" Width="50" Margin="0,0,5,0" Background="#45B36A" Foreground="White" BorderThickness="0" FontSize="10" Cursor="Hand" FontWeight="Bold"/>
@@ -379,15 +381,12 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                             </StackPanel>
                         </Grid>
                         <Grid Grid.Row="1" Margin="5,0,5,5">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="380"/>
-                            </Grid.ColumnDefinitions>
-                            
+                            <!-- Removed second column definition to extend width -->
+
                             <ListView Name="GridMbxPerms" Grid.Column="0" Background="Transparent" Foreground="#E0E0E0" BorderThickness="0" SelectionMode="Single" ScrollViewer.HorizontalScrollBarVisibility="Auto">
                                 <ListView.View>
                                     <GridView>
-                                        <GridViewColumn Header="User (UPN)" Width="230" DisplayMemberBinding="{Binding User}"/>
+                                        <GridViewColumn Header="User (UPN)" Width="253" DisplayMemberBinding="{Binding User}"/>
                                         <GridViewColumn Header="Access Rights" Width="300" DisplayMemberBinding="{Binding AccessRights}"/>
                                         <GridViewColumn Header="Send Permissions" Width="120" DisplayMemberBinding="{Binding SendRights}"/>
                                     </GridView>
@@ -431,8 +430,8 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                                 <ListView Name="GridCalPerms" Background="Transparent" Foreground="#E0E0E0" BorderThickness="0" SelectionMode="Single">
                                     <ListView.View>
                                         <GridView>
-                                            <GridViewColumn Header="User (UPN)" Width="230" DisplayMemberBinding="{Binding User}"/>
-                                            <GridViewColumn Header="Calendar Roles" Width="420" DisplayMemberBinding="{Binding AccessRights}"/>
+                                            <GridViewColumn Header="User (UPN)" Width="253" DisplayMemberBinding="{Binding User}"/>
+                                            <GridViewColumn Header="Calendar Roles" Width="190" DisplayMemberBinding="{Binding AccessRights}"/>
                                         </GridView>
                                     </ListView.View>
                                 </ListView>
@@ -1387,6 +1386,7 @@ $BtnConnect.Add_Click({
 
                     # Update UI to Connected
                     $SyncHash.Window.Dispatcher.Invoke({
+                            $SyncHash.Window.Activate() | Out-Null
                             # Create multi-line content for the button
                             $sp = New-Object System.Windows.Controls.StackPanel -Property @{ VerticalAlignment = "Center" }
                             $txt1 = New-Object System.Windows.Controls.TextBlock -Property @{
