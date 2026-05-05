@@ -44,7 +44,7 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
 [xml]$XAML = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Exchange Mailbox Manager" Height="700" Width="1350" MinWidth="1100"
+        Title="Exchange Mailbox Manager" Height="775" Width="1350" MinWidth="1100"
         Background="#1E1E1E" Foreground="#E0E0E0" WindowStartupLocation="CenterScreen">
     <Window.Resources>
         <!-- Tooltip for Calendar Roles -->
@@ -354,7 +354,7 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
             <!-- Right: Permissions & Actions -->
             <Grid Grid.Column="2">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="0.8*"/>
+                    <RowDefinition Height="1.0*"/>
                     <RowDefinition Height="5"/>
                     <RowDefinition Height="1.4*"/>
                 </Grid.RowDefinitions>
