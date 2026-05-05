@@ -357,10 +357,10 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                         <Grid Grid.Row="0" Margin="10,10,10,5">
                             <!-- Removed second column definition to extend width -->
                             <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock Text="Mailbox Permissions" FontWeight="Bold" Foreground="#007ACC" FontSize="15" Width="150" VerticalAlignment="Center"/>
-                                <Button Name="BtnAddMbx" Content="Add" Height="22" Width="50" Margin="0,0,5,0" Background="#45B36A" Foreground="White" BorderThickness="0" FontSize="10" Cursor="Hand" FontWeight="Bold"/>
-                                <Button Name="BtnEditMbx" Content="Edit" Height="22" Width="50" Background="#FFB13B" Foreground="White" BorderThickness="0" FontSize="10" Cursor="Hand" FontWeight="Bold"/>
-                                <Button Name="BtnRemoveMbx" Content="Remove" Height="22" Width="50" Margin="5,0,0,0" Background="#FF6B68" Foreground="White" BorderThickness="0" FontSize="10" Cursor="Hand" FontWeight="Bold"/>
+                                <TextBlock Text="Mailbox Permissions" FontWeight="Bold" Foreground="#007ACC" FontSize="15" Width="170" VerticalAlignment="Center"/>
+                                <Button Name="BtnAddMbx" Content="Add" Height="22" Width="65" Margin="0,0,5,0" Background="#45B36A" Foreground="White" BorderThickness="0" FontSize="10" Cursor="Hand" FontWeight="Bold"/>
+                                <Button Name="BtnEditMbx" Content="Edit" Height="22" Width="65" Margin="0,0,5,0" Background="#FFB13B" Foreground="White" BorderThickness="0" FontSize="10" Cursor="Hand" FontWeight="Bold"/>
+                                <Button Name="BtnRemoveMbx" Content="Remove" Height="22" Width="65" Background="#FF6B68" Foreground="White" BorderThickness="0" FontSize="10" Cursor="Hand" FontWeight="Bold"/>
                             </StackPanel>
                         </Grid>
                         <Grid Grid.Row="1" Margin="5,0,5,5">
@@ -369,7 +369,7 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                             <ListView Name="GridMbxPerms" Grid.Column="0" Background="Transparent" Foreground="#E0E0E0" BorderThickness="0" SelectionMode="Single" ScrollViewer.HorizontalScrollBarVisibility="Auto">
                                 <ListView.View>
                                     <GridView>
-                                        <GridViewColumn Header="User (UPN)" Width="278" DisplayMemberBinding="{Binding User}"/>
+                                        <GridViewColumn Header="User / Group" Width="278" DisplayMemberBinding="{Binding User}"/>
                                         <GridViewColumn Header="Access Rights" Width="375" DisplayMemberBinding="{Binding AccessRights}"/>
                                         <GridViewColumn Header="Send Permissions" Width="215" DisplayMemberBinding="{Binding SendRights}"/>
                                     </GridView>
@@ -396,10 +396,10 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                                 <ColumnDefinition Width="380"/>
                             </Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock Text="Calendar Permissions" FontWeight="Bold" Foreground="#007ACC" FontSize="15" Width="165" VerticalAlignment="Center"/>
-                                <Button Name="BtnAddCal" Content="Add" Height="22" Width="50" Margin="0,0,5,0" Background="#45B36A" Foreground="White" BorderThickness="0" FontSize="10" Cursor="Hand" FontWeight="Bold"/>
-                                <Button Name="BtnEditCal" Content="Edit" Height="22" Width="50" Background="#FFB13B" Foreground="White" BorderThickness="0" FontSize="10" Cursor="Hand" FontWeight="Bold"/>
-                                <Button Name="BtnRemoveCal" Content="Remove" Height="22" Width="50" Margin="5,0,0,0" Background="#FF6B68" Foreground="White" BorderThickness="0" FontSize="10" Cursor="Hand" FontWeight="Bold"/>
+                                <TextBlock Text="Calendar Permissions" FontWeight="Bold" Foreground="#007ACC" FontSize="15" Width="170" VerticalAlignment="Center"/>
+                                <Button Name="BtnAddCal" Content="Add" Height="22" Width="65" Margin="0,0,5,0" Background="#45B36A" Foreground="White" BorderThickness="0" FontSize="10" Cursor="Hand" FontWeight="Bold"/>
+                                <Button Name="BtnEditCal" Content="Edit" Height="22" Width="65" Margin="0,0,5,0" Background="#FFB13B" Foreground="White" BorderThickness="0" FontSize="10" Cursor="Hand" FontWeight="Bold"/>
+                                <Button Name="BtnRemoveCal" Content="Remove" Height="22" Width="65" Background="#FF6B68" Foreground="White" BorderThickness="0" FontSize="10" Cursor="Hand" FontWeight="Bold"/>
                             </StackPanel>
                             <TextBlock Grid.Column="1" Text="Definitions" FontWeight="Bold" Foreground="#007ACC" Margin="24,0,0,0" FontSize="15" VerticalAlignment="Center"/>
                         </Grid>
@@ -413,7 +413,7 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                                 <ListView Name="GridCalPerms" Background="Transparent" Foreground="#E0E0E0" BorderThickness="0" SelectionMode="Single">
                                     <ListView.View>
                                         <GridView>
-                                            <GridViewColumn Header="User (UPN)" Width="278" DisplayMemberBinding="{Binding User}"/>
+                                            <GridViewColumn Header="User / Group" Width="278" DisplayMemberBinding="{Binding User}"/>
                                             <GridViewColumn Header="Calendar Roles" Width="190" DisplayMemberBinding="{Binding AccessRights}"/>
                                         </GridView>
                                     </ListView.View>
@@ -425,12 +425,12 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                             <Border Grid.Column="1" BorderBrush="#3F3F46" BorderThickness="1,0,0,0" Margin="10,0,0,5" Padding="10,0,0,0">
                                     <StackPanel>
                                         <TextBlock Text="SPECIAL USERS" FontSize="9" FontWeight="Bold" Foreground="#007ACC" Margin="0,0,0,2"/>
-                                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#AAAAAA" Margin="0,0,0,12">
+                                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#CCCCCC" Margin="0,0,0,12">
                                             <Run FontWeight="Bold" Foreground="#E0E0E0">Default:</Run> All internal users<LineBreak/>
                                             <Run FontWeight="Bold" Foreground="#E0E0E0">Anonymous:</Run> All external users (everyone)
                                         </TextBlock>
                                         <TextBlock Text="ROLE DEFINITIONS" FontSize="9" FontWeight="Bold" Foreground="#007ACC" Margin="0,0,0,2"/>
-                                        <TextBlock FontSize="11" TextWrapping="Wrap" Foreground="#AAAAAA">
+                                        <TextBlock FontSize="11" TextWrapping="Wrap" Foreground="#CCCCCC">
                                             <Run FontWeight="Bold" Foreground="#E0E0E0">Author:</Run> CreateItems, DeleteOwnedItems, EditOwnedItems, FolderVisible, ReadItems<LineBreak/>
                                             <Run FontWeight="Bold" Foreground="#E0E0E0">Contributor:</Run> CreateItems, FolderVisible<LineBreak/>
                                             <Run FontWeight="Bold" Foreground="#E0E0E0">Editor:</Run> CreateItems, DeleteAllItems, DeleteOwnedItems, EditAllItems, EditOwnedItems, FolderVisible, ReadItems<LineBreak/>
@@ -699,7 +699,7 @@ function Show-PermissionDialog {
         $diag.Owner = $SyncHash.Window
     }
     catch {
-        [System.Windows.MessageBox]::Show("Error loading permission dialog XAML: $($_.Exception.Message)", "XAML Error", "OK", "Error") | Out-Null
+        Show-MessageDialog -Title "XAML Error" -Message "Error loading permission dialog XAML: $($_.Exception.Message)" | Out-Null
         return $null
     }
 
@@ -779,16 +779,17 @@ function Show-PermissionDialog {
                     # Mandatory Automapping only if Access Rights changed from None (or initial empty) to something else,
                     # OR if they were explicitly changed during an edit.
                     if ($ShowAutomapping -and -not $isNone) {
-                        if ($rightsChanged -and -not $autoSelected) {
-                            [System.Windows.MessageBox]::Show("Access Rights were changed. Please select an Automapping option.")
+                        if ($rightsChanged -and -not $autoSelected -and $action -ne "Add") {
+                            # Only for edit, not add
+                            Show-MessageDialog -Title "Automapping Required" -Message "Access Rights were changed. Please select an Automapping option." | Out-Null
                             return
                         }
                     }
 
                     $script:DiagResult = @{ 
                         User              = $upn; 
-                        Rights            = $selectedRights;
-                        RightsChanged     = $rightsChanged;
+                        Rights            = $selectedRights; # The selected rights
+                        RightsChanged     = $rightsChanged; # Whether the rights were changed from initial
                         SendRights        = $selectedSend;
                         SendRightsChanged = ($selectedSend -ne $initialSendRights);
                         Automapping       = [bool]$chkEnable.IsChecked;
@@ -796,9 +797,9 @@ function Show-PermissionDialog {
                     }
                     $diag.Close()
                 }
-                else { [System.Windows.MessageBox]::Show("Please select access rights.") }
+                else { Show-MessageDialog -Title "Missing Selection" -Message "Please select access rights." | Out-Null }
             }
-            else { [System.Windows.MessageBox]::Show("Please enter a valid UPN (e.g. user@domain.com) or use 'Default' / 'Anonymous' / 'Standard'.") }
+            else { Show-MessageDialog -Title "Invalid User" -Message "Please enter a valid UPN (e.g. user@domain.com) or use 'Default' / 'Anonymous' / 'Standard'." | Out-Null }
         })
     $bCancel.Add_Click({ $diag.Close() })
 
@@ -845,6 +846,47 @@ function Show-ConfirmDialog {
 
     $diag.ShowDialog() | Out-Null
     return $script:ConfirmResult
+}
+
+# ==============================================================================
+# 4.6. MESSAGE DIALOG FUNCTION (Custom styled replacement for MessageBox)
+# ==============================================================================
+function Show-MessageDialog {
+    param(
+        [string]$Title,
+        [string]$Message
+    )
+
+    [xml]$MessageXaml = @"
+    <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+            Title="$Title" Height="170" Width="400" Background="#1E1E1E" Foreground="White" 
+            WindowStartupLocation="CenterOwner" ResizeMode="NoResize" ShowInTaskbar="False">
+        <Grid Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <TextBlock Text="$Message" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="13" Foreground="#E0E0E0" FontFamily="Segoe UI"/>
+            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
+                <Button Name="BtnOk" Content="OK" Width="85" Height="25" Background="#007ACC" Foreground="White" BorderThickness="0" FontWeight="Bold" Cursor="Hand"/>
+            </StackPanel>
+        </Grid>
+    </Window>
+"@
+    try {
+        $reader = (New-Object System.Xml.XmlNodeReader $MessageXaml)
+        $diag = [Windows.Markup.XamlReader]::Load($reader)
+        $diag.Owner = $SyncHash.Window
+    }
+    catch {
+        # Fallback to default MessageBox if custom dialog fails to load
+        [System.Windows.MessageBox]::Show("Error loading custom message dialog XAML: $($_.Exception.Message)`n`nOriginal Message: $Message", "XAML Error", "OK", "Error") | Out-Null
+        return
+    }
+
+    $bOk = $diag.FindName("BtnOk")
+    $bOk.Add_Click({ $diag.Close() })
+    $diag.ShowDialog() | Out-Null
 }
 
 # ==============================================================================
@@ -1079,7 +1121,7 @@ function Update-PermissionAsync {
                 # We remove broad matches to see the actual error in the popup instead of guessing
                 if ($err -match "is closed|broken pipe|network connection") {
                     $SyncHash.Window.Dispatcher.Invoke({
-                            [System.Windows.MessageBox]::Show("Exchange Online connection lost (Closed/Broken). Please reconnect.")
+                            Show-MessageDialog -Title "Connection Lost" -Message "Exchange Online connection lost (Closed/Broken). Please reconnect." | Out-Null
                             $SyncHash.StatusMbx.Text = ""
                             $SyncHash.StatusCal.Text = ""
                         })
@@ -1088,8 +1130,9 @@ function Update-PermissionAsync {
                     $SyncHash.Window.Dispatcher.Invoke({
                             Write-Host "[$(Get-Date -f HH:mm:ss)] Update Error: $err" -ForegroundColor Red
                             [System.Windows.MessageBox]::Show("Error updating permissions:`n$err")
-                            $SyncHash.StatusMbx.Text = ""
-                            $SyncHash.StatusCal.Text = ""
+                            Show-MessageDialog -Title "Update Error" -Message "Error updating permissions:`n$err" | Out-Null
+                            $SyncHash.StatusMbx.Text = "" # Clear status regardless
+                            $SyncHash.StatusCal.Text = "" # Clear status regardless
                         })
                 }
             }
@@ -1158,7 +1201,7 @@ function Remove-PermissionAsync {
                 # We remove broad matches to see the actual error in the popup instead of guessing
                 if ($err -match "is closed|broken pipe|network connection") {
                     $SyncHash.Window.Dispatcher.Invoke({
-                            [System.Windows.MessageBox]::Show("Exchange Online connection lost (Closed/Broken). Please reconnect.")
+                            Show-MessageDialog -Title "Connection Lost" -Message "Exchange Online connection lost (Closed/Broken). Please reconnect." | Out-Null
                             $SyncHash.StatusMbx.Text = ""
                             $SyncHash.StatusCal.Text = ""
                         })
@@ -1167,8 +1210,9 @@ function Remove-PermissionAsync {
                     $SyncHash.Window.Dispatcher.Invoke({
                             Write-Host "[$(Get-Date -f HH:mm:ss)] Remove Error: $err" -ForegroundColor Red
                             [System.Windows.MessageBox]::Show("Error removing permissions:`n$err")
-                            $SyncHash.StatusMbx.Text = ""
-                            $SyncHash.StatusCal.Text = ""
+                            Show-MessageDialog -Title "Removal Error" -Message "Error removing permissions:`n$err" | Out-Null
+                            $SyncHash.StatusMbx.Text = "" # Clear status regardless
+                            $SyncHash.StatusCal.Text = "" # Clear status regardless
                         })
                 }
             }
@@ -1185,7 +1229,7 @@ $calendarRoles = @("None", "AvailabilityOnly", "LimitedDetails", "Author", "Cont
 $BtnAddMbx.Add_Click({
         Write-Host "[$(Get-Date -f HH:mm:ss)] BtnAddMbx clicked." -ForegroundColor Magenta
         $userList = $SyncHash.AddressCache
-        $res = Show-PermissionDialog -Title "Add Mailbox Permission" -Options $mailboxRights -Label "Access Rights:" -ShowSendRights $true -UserList $userList
+        $res = Show-PermissionDialog -Title "Add Mailbox Permission" -Options $mailboxRights -Label "Access Rights:" -ShowSendRights $true -UserList $userList -UserEditable $true
         if ($res) { Update-PermissionAsync -Type "Mailbox" -Action "Add" -Data $res } else { Write-Host "[$(Get-Date -f HH:mm:ss)] Show-PermissionDialog for AddMbx returned null." -ForegroundColor Yellow }
     })
 
@@ -1209,7 +1253,7 @@ $ListMailboxes.Add_PreviewMouseLeftButtonDown({
 $BtnEditMbx.Add_Click({
         Write-Host "[$(Get-Date -f HH:mm:ss)] BtnEditMbx clicked." -ForegroundColor Magenta
         $sel = $GridMbxPerms.SelectedItem
-        if (-not $sel) { [System.Windows.MessageBox]::Show("Please select a user from the list."); return }
+        if (-not $sel) { Show-MessageDialog -Title "No User Selected" -Message "Please select a user from the list." | Out-Null; return }
         # Extract the first access right for display in the dropdown
         $currentRight = ($sel.AccessRights -split "," | Select-Object -First 1 | ForEach-Object { $_.Trim() })
         $userList = $SyncHash.AddressCache
@@ -1220,7 +1264,7 @@ $BtnEditMbx.Add_Click({
 $BtnRemoveMbx.Add_Click({
         Write-Host "[$(Get-Date -f HH:mm:ss)] BtnRemoveMbx clicked." -ForegroundColor Magenta
         $sel = $GridMbxPerms.SelectedItem
-        if (-not $sel) { [System.Windows.MessageBox]::Show("Please select a user from the list."); return }
+        if (-not $sel) { Show-MessageDialog -Title "No User Selected" -Message "Please select a user from the list." | Out-Null; return }
         if (Show-ConfirmDialog -Title "Confirm Removal" -Message "Are you sure you want to remove the selected mailbox permission for $($sel.User) from $($SyncHash.SelectedMbx)?") {
             Remove-PermissionAsync -Type "Mailbox" -User $sel.User -AccessRights $sel.AccessRights
         }
@@ -1229,14 +1273,14 @@ $BtnRemoveMbx.Add_Click({
 $BtnAddCal.Add_Click({
         Write-Host "[$(Get-Date -f HH:mm:ss)] BtnAddCal clicked." -ForegroundColor Magenta
         $userList = $SyncHash.AddressCache
-        $res = Show-PermissionDialog -Title "Add Calendar Permission" -Options $calendarRoles -Label "Access Roles:" -ShowAutomapping $false -UserList $userList
+        $res = Show-PermissionDialog -Title "Add Calendar Permission" -Options $calendarRoles -Label "Access Roles:" -ShowAutomapping $false -UserList $userList -UserEditable $true
         if ($res) { Update-PermissionAsync -Type "Calendar" -Action "Add" -Data $res } else { Write-Host "[$(Get-Date -f HH:mm:ss)] Show-PermissionDialog for AddCal returned null." -ForegroundColor Yellow }
     })
 
 $BtnEditCal.Add_Click({
         Write-Host "[$(Get-Date -f HH:mm:ss)] BtnEditCal clicked." -ForegroundColor Magenta
         $sel = $GridCalPerms.SelectedItem
-        if (-not $sel) { [System.Windows.MessageBox]::Show("Please select a user from the list."); return }
+        if (-not $sel) { Show-MessageDialog -Title "No User Selected" -Message "Please select a user from the list." | Out-Null; return }
         $currentRole = $sel.AccessRights -split "," | Select-Object -First 1 | ForEach-Object { $_.Trim() }
         $userList = $SyncHash.AddressCache
         $res = Show-PermissionDialog -Title "Edit Calendar Permission" -User $sel.User -Options $calendarRoles -CurrentOption $currentRole -UserEditable $false -Label "Access Roles:" -ShowAutomapping $false -UserList $userList
@@ -1246,7 +1290,7 @@ $BtnEditCal.Add_Click({
 $BtnRemoveCal.Add_Click({
         Write-Host "[$(Get-Date -f HH:mm:ss)] BtnRemoveCal clicked." -ForegroundColor Magenta
         $sel = $GridCalPerms.SelectedItem
-        if (-not $sel) { [System.Windows.MessageBox]::Show("Please select a user from the list."); return }
+        if (-not $sel) { Show-MessageDialog -Title "No User Selected" -Message "Please select a user from the list." | Out-Null; return }
         if (Show-ConfirmDialog -Title "Confirm Removal" -Message "Are you sure you want to remove the selected calendar permission for $($sel.User) from $($SyncHash.SelectedMbx)?") {
             $currentRole = $sel.AccessRights -split "," | Select-Object -First 1 | ForEach-Object { $_.Trim() }
             Remove-PermissionAsync -Type "Calendar" -User $sel.User -AccessRights $currentRole
@@ -1340,27 +1384,59 @@ $BtnConnect.Add_Click({
         $SyncHash.TargetUPN = $UserUPN
         $SyncHash.FetchAllMailboxes = $FetchAll
 
-        # Move window to the right to ensure the login prompt is visible
-        $Window.Dispatcher.Invoke([Action] { $Window.Left = $Window.Left + 300 })
+        # Create and show a small authentication status window
+        $Window.Dispatcher.Invoke({
+                $overlayXml = @"
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        Height="100" Width="320" WindowStyle="None" AllowsTransparency="True" ShowInTaskbar="False"
+        Background="Transparent" WindowStartupLocation="CenterScreen">
+    <Border Background="#2D2D30" CornerRadius="8" BorderBrush="#007ACC" BorderThickness="2" Cursor="SizeAll">
+        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+            <TextBlock Text="Authentication in Progress" Foreground="#007ACC" FontSize="14" FontWeight="Bold" Margin="0,0,0,5" HorizontalAlignment="Center"/>
+            <TextBlock Text="Please check for the login window..." Foreground="#E0E0E0" FontSize="11" HorizontalAlignment="Center"/>
+        </StackPanel>
+    </Border>
+</Window>
+"@
+                $overlay = [Windows.Markup.XamlReader]::Load((New-Object System.Xml.XmlNodeReader ([xml]$overlayXml)))
+                $overlay.Add_MouseLeftButtonDown({ $overlay.DragMove() })
+                $overlay.Show()
+                $SyncHash.AuthOverlay = $overlay
+            })
+
+        # Minimize window so login prompt is visible
+        $Window.Dispatcher.Invoke([Action] { $Window.WindowState = "Minimized" })
+
         $PowerShell = [powershell]::Create().AddScript({
                 param($Delegated, $Org, $UserUPN, $SyncHash, $FetchAll)
                 Import-Module ExchangeOnlineManagement
         
                 try {
-                    $connParams = @{ ShowProgress = $false; ErrorAction = "Stop" }
+                    try {
+                        $connParams = @{ ShowProgress = $false; ErrorAction = "Stop" }
 
-                    if ($Delegated -and (-not [string]::IsNullOrWhiteSpace($Org))) { 
-                        $connParams["DelegatedOrganization"] = $Org 
-                    }
-                    else {
-                        if (-not [string]::IsNullOrWhiteSpace($UserUPN)) { 
-                            $connParams["UserPrincipalName"] = $UserUPN 
+                        if ($Delegated -and (-not [string]::IsNullOrWhiteSpace($Org))) { 
+                            $connParams["DelegatedOrganization"] = $Org 
                         }
+                        else {
+                            if (-not [string]::IsNullOrWhiteSpace($UserUPN)) { 
+                                $connParams["UserPrincipalName"] = $UserUPN 
+                            }
+                        }
+
+                        Connect-ExchangeOnline @connParams
+                    }
+                    finally {
+                        $SyncHash.Window.Dispatcher.Invoke({
+                                if ($SyncHash.AuthOverlay) { $SyncHash.AuthOverlay.Close(); $SyncHash.AuthOverlay = $null }
+                                $SyncHash.Window.WindowState = "Normal"
+                                $SyncHash.Window.Activate() | Out-Null
+                            })
                     }
 
-                    Connect-ExchangeOnline @connParams
-
-                    $SyncHash.Window.Dispatcher.Invoke({ Write-Host "[$(Get-Date -f HH:mm:ss)] Connected." -ForegroundColor Green })
+                    $SyncHash.Window.Dispatcher.Invoke({
+                            Write-Host "[$(Get-Date -f HH:mm:ss)] Connected." -ForegroundColor Green
+                        })
 
                     # Capture the actual UPN used to login
                     $info = Get-ConnectionInformation | Select-Object -First 1
@@ -1369,7 +1445,6 @@ $BtnConnect.Add_Click({
 
                     # Update UI to Connected
                     $SyncHash.Window.Dispatcher.Invoke({
-                            $SyncHash.Window.Activate() | Out-Null
                             # Create multi-line content for the button
                             $sp = New-Object System.Windows.Controls.StackPanel -Property @{ VerticalAlignment = "Center" }
                             $txt1 = New-Object System.Windows.Controls.TextBlock -Property @{
@@ -1491,14 +1566,21 @@ $BtnConnect.Add_Click({
                 catch {
                     $err = $_.Exception.Message
                     $SyncHash.Window.Dispatcher.Invoke({
-                            Write-Host "[$(Get-Date -f HH:mm:ss)] CONNECTION ERROR: $err" -ForegroundColor Red
+                            if ($SyncHash.AuthOverlay) { $SyncHash.AuthOverlay.Close(); $SyncHash.AuthOverlay = $null }
+                            $SyncHash.Window.WindowState = "Normal"
+                            $null = $SyncHash.Window.Activate()
+                            Show-MessageDialog -Title "Connection Error" -Message "CONNECTION ERROR: $err" | Out-Null
                             $SyncHash.BtnConnect.Content = "Connection Failed"
                             $SyncHash.BtnConnect.Background = "#FF6B68" # Red
-                            $SyncHash.BtnConnect.IsHitTestVisible = $true
                             $SyncHash.BtnConnect.Foreground = "White"
                             $SyncHash.StatusMailboxes.Text = "(Error)"
                             $SyncHash.ProgressMailboxesHeader.Visibility = "Collapsed"
                             $SyncHash.ProgressMailboxesText.Visibility = "Collapsed"
+                        })
+                }
+                finally {
+                    $SyncHash.Window.Dispatcher.Invoke({
+                            $SyncHash.BtnConnect.IsHitTestVisible = $true
                         })
                 }
             }).AddArgument($Delegated).AddArgument($Org).AddArgument($UserUPN).AddArgument($SyncHash).AddArgument($FetchAll)
@@ -1546,7 +1628,7 @@ $BtnClearSearch.Add_Click({
 $BtnFetchUPN.Add_Click({
         $upn = $TxtFetchUPN.Text.Trim()
         if ([string]::IsNullOrWhiteSpace($upn)) {
-            [System.Windows.MessageBox]::Show("Please enter a UPN (e.g. user@domain.com)") | Out-Null
+            Show-MessageDialog -Title "Missing UPN" -Message "Please enter a UPN (e.g. user@domain.com)" | Out-Null
             return
         }
 
@@ -1615,8 +1697,7 @@ $BtnFetchUPN.Add_Click({
                 catch {
                     $err = $_.Exception.Message
                     $SyncHash.Window.Dispatcher.Invoke({
-                            Write-Host "[$(Get-Date -f HH:mm:ss)] ERROR fetching UPN: $err" -ForegroundColor Red
-                            [System.Windows.MessageBox]::Show("Error fetching mailbox:`n$err", "Error", "OK", "Error") | Out-Null
+                            Show-MessageDialog -Title "Fetch Error" -Message "Error fetching mailbox:`n$err" | Out-Null
                             $SyncHash.StatusMailboxes.Text = ""
                             $SyncHash.BtnFetchUPN.Content = "Get"
                             $SyncHash.BtnFetchUPN.IsHitTestVisible = $true
