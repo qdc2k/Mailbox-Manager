@@ -44,7 +44,7 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
 [xml]$XAML = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Exchange Mailbox Manager" Height="775" Width="1350" MinWidth="1100"
+        Title="Exchange Mailbox Manager" Height="775" Width="1188" MinWidth="1100"
         Background="#1E1E1E" Foreground="#E0E0E0" WindowStartupLocation="CenterScreen">
     <Window.Resources>
         <!-- Tooltip for Calendar Roles -->
@@ -130,12 +130,60 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
             </Style.Triggers>
         </Style>
 
-        <!-- Custom ScrollViewer Style for Dark Theme -->
+        <!-- Modern Minimalist ScrollBar & ScrollViewer Styles -->
+        <Style x:Key="ModernScrollBarThumb" TargetType="{x:Type Thumb}">
+            <Setter Property="OverridesDefaultStyle" Value="true"/>
+            <Setter Property="IsTabStop" Value="false"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Thumb}">
+                        <Border x:Name="rectangle" Background="#4F4F4F" CornerRadius="4" SnapsToDevicePixels="True" Margin="2"/>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="true">
+                                <Setter TargetName="rectangle" Property="Background" Value="#6F6F6F"/>
+                            </Trigger>
+                            <Trigger Property="IsDragging" Value="true">
+                                <Setter TargetName="rectangle" Property="Background" Value="#007ACC"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="{x:Type ScrollBar}">
+            <Setter Property="Stylus.IsPressAndHoldEnabled" Value="false"/>
+            <Setter Property="Stylus.IsFlicksEnabled" Value="false"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Width" Value="10"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ScrollBar}">
+                        <Grid x:Name="Bg" Background="{TemplateBinding Background}" SnapsToDevicePixels="true">
+                            <Track x:Name="PART_Track" IsDirectionReversed="true" IsEnabled="{TemplateBinding IsEnabled}">
+                                <Track.Thumb>
+                                    <Thumb Style="{StaticResource ModernScrollBarThumb}" />
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="Orientation" Value="Horizontal">
+                                <Setter TargetName="Bg" Property="Height" Value="10"/>
+                                <Setter Property="Width" Value="Auto"/>
+                                <Setter Property="Height" Value="10"/>
+                                <Setter TargetName="PART_Track" Property="IsDirectionReversed" Value="false"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style TargetType="{x:Type ScrollViewer}">
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type ScrollViewer}">
-                        <Grid>
+                        <Grid Background="{TemplateBinding Background}">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
@@ -144,74 +192,9 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                                 <RowDefinition Height="*"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
-                            <ScrollContentPresenter Grid.Column="0" Grid.Row="0" CanContentScroll="{TemplateBinding CanContentScroll}" CanHorizontallyScroll="False" CanVerticallyScroll="False"/>
-                            <ScrollBar Name="PART_VerticalScrollBar" Grid.Column="1" Grid.Row="0"
-                                       Value="{TemplateBinding VerticalOffset}"
-                                       Maximum="{TemplateBinding ScrollableHeight}"
-                                       ViewportSize="{TemplateBinding ViewportHeight}"
-                                       Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}"
-                                       Background="#2D2D30">
-                                <ScrollBar.Template>
-                                    <ControlTemplate TargetType="{x:Type ScrollBar}">
-                                        <Grid>
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition Height="Auto"/>
-                                                <RowDefinition Height="*"/>
-                                                <RowDefinition Height="Auto"/>
-                                            </Grid.RowDefinitions>
-                                            <RepeatButton Grid.Row="0" Command="{x:Static ScrollBar.LineUpCommand}" Background="#3E3E42" BorderThickness="0" Width="17" Height="17">
-                                                <Path Fill="White" Data="M 0 4 L 8 4 L 4 0 Z"/>
-                                            </RepeatButton>
-                                            <Track Name="PART_Track" Grid.Row="1" IsDirectionReversed="true">
-                                                <Track.DecreaseRepeatButton>
-                                                    <RepeatButton Command="{x:Static ScrollBar.PageUpCommand}" Opacity="0" />
-                                                </Track.DecreaseRepeatButton>
-                                                <Track.Thumb>
-                                                    <Thumb Background="#555555" BorderBrush="#3F3F46" BorderThickness="0" Width="17">
-                                                        <Thumb.Template>
-                                                            <ControlTemplate TargetType="{x:Type Thumb}">
-                                                                <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="2"/>
-                                                                <ControlTemplate.Triggers>
-                                                                    <Trigger Property="IsMouseOver" Value="True">
-                                                                        <Setter Property="Background" Value="#777777"/>
-                                                                    </Trigger>
-                                                                    <Trigger Property="IsDragging" Value="True">
-                                                                        <Setter Property="Background" Value="#007ACC"/>
-                                                                    </Trigger>
-                                                                </ControlTemplate.Triggers>
-                                                            </ControlTemplate>
-                                                        </Thumb.Template>
-                                                    </Thumb>
-                                                </Track.Thumb>
-                                                <Track.IncreaseRepeatButton>
-                                                    <RepeatButton Command="{x:Static ScrollBar.PageDownCommand}" Opacity="0" />
-                                                </Track.IncreaseRepeatButton>
-                                            </Track>
-                                            <RepeatButton Grid.Row="2" Command="{x:Static ScrollBar.LineDownCommand}" Background="#3E3E42" BorderThickness="0" Width="17" Height="17">
-                                                <Path Fill="White" Data="M 0 0 L 4 4 L 8 0 Z"/>
-                                            </RepeatButton>
-                                        </Grid>
-                                    </ControlTemplate>
-                                </ScrollBar.Template>
-                            </ScrollBar>
-                            <ScrollBar Name="PART_HorizontalScrollBar" Grid.Column="0" Grid.Row="1"
-                                       Orientation="Horizontal"
-                                       Value="{TemplateBinding HorizontalOffset}"
-                                       Maximum="{TemplateBinding ScrollableWidth}"
-                                       ViewportSize="{TemplateBinding ViewportWidth}"
-                                       Visibility="{TemplateBinding ComputedHorizontalScrollBarVisibility}"
-                                       Background="#2D2D30">
-                                <ScrollBar.Template>
-                                    <ControlTemplate TargetType="{x:Type ScrollBar}">
-                                        <Grid>
-                                            <!-- Horizontal scrollbar template (similar to vertical, but rotated) -->
-                                            <!-- For brevity, this is a placeholder. A full implementation would mirror the vertical scrollbar's structure. -->
-                                            <Border Background="#2D2D30" />
-                                            <Thumb Background="#555555" />
-                                        </Grid>
-                                    </ControlTemplate>
-                                </ScrollBar.Template>
-                            </ScrollBar>
+                            <ScrollContentPresenter x:Name="PART_ScrollContentPresenter" CanContentScroll="{TemplateBinding CanContentScroll}" />
+                            <ScrollBar x:Name="PART_VerticalScrollBar" Grid.Column="1" Value="{TemplateBinding VerticalOffset}" Maximum="{TemplateBinding ScrollableHeight}" ViewportSize="{TemplateBinding ViewportHeight}" Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}"/>
+                            <ScrollBar x:Name="PART_HorizontalScrollBar" Grid.Row="1" Orientation="Horizontal" Value="{TemplateBinding HorizontalOffset}" Maximum="{TemplateBinding ScrollableWidth}" ViewportSize="{TemplateBinding ViewportWidth}" Visibility="{TemplateBinding ComputedHorizontalScrollBarVisibility}"/>
                         </Grid>
                     </ControlTemplate>
                 </Setter.Value>
@@ -386,9 +369,9 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                             <ListView Name="GridMbxPerms" Grid.Column="0" Background="Transparent" Foreground="#E0E0E0" BorderThickness="0" SelectionMode="Single" ScrollViewer.HorizontalScrollBarVisibility="Auto">
                                 <ListView.View>
                                     <GridView>
-                                        <GridViewColumn Header="User (UPN)" Width="253" DisplayMemberBinding="{Binding User}"/>
-                                        <GridViewColumn Header="Access Rights" Width="300" DisplayMemberBinding="{Binding AccessRights}"/>
-                                        <GridViewColumn Header="Send Permissions" Width="120" DisplayMemberBinding="{Binding SendRights}"/>
+                                        <GridViewColumn Header="User (UPN)" Width="278" DisplayMemberBinding="{Binding User}"/>
+                                        <GridViewColumn Header="Access Rights" Width="375" DisplayMemberBinding="{Binding AccessRights}"/>
+                                        <GridViewColumn Header="Send Permissions" Width="215" DisplayMemberBinding="{Binding SendRights}"/>
                                     </GridView>
                                 </ListView.View>
                             </ListView>
@@ -430,7 +413,7 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                                 <ListView Name="GridCalPerms" Background="Transparent" Foreground="#E0E0E0" BorderThickness="0" SelectionMode="Single">
                                     <ListView.View>
                                         <GridView>
-                                            <GridViewColumn Header="User (UPN)" Width="253" DisplayMemberBinding="{Binding User}"/>
+                                            <GridViewColumn Header="User (UPN)" Width="278" DisplayMemberBinding="{Binding User}"/>
                                             <GridViewColumn Header="Calendar Roles" Width="190" DisplayMemberBinding="{Binding AccessRights}"/>
                                         </GridView>
                                     </ListView.View>
