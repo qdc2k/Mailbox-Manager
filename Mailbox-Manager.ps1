@@ -44,7 +44,7 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
 [xml]$XAML = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Exchange Mailbox Manager" Height="700" Width="1200" 
+        Title="Exchange Mailbox Manager" Height="700" Width="1350" MinWidth="1100"
         Background="#1E1E1E" Foreground="#E0E0E0" WindowStartupLocation="CenterScreen">
     <Window.Resources>
         <!-- Tooltip for Calendar Roles -->
@@ -221,25 +221,31 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
         </Grid.RowDefinitions>
 
         <!-- Top Connection Bar -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
-            <Button Name="BtnConnect" Content="Connect to Exchange" Width="140" Background="#007ACC" Foreground="White" BorderThickness="0" Cursor="Hand" FontWeight="Bold" Margin="0,0,15,0"/>
+        <Grid Grid.Row="0" Margin="0,0,0,15">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            
+            <Button Name="BtnConnect" Grid.Column="0" Content="Connect" Width="140" Height="35" Background="#007ACC" Foreground="White" BorderThickness="0" Cursor="Hand" FontWeight="Bold" Margin="0,0,15,0" VerticalAlignment="Top"/>
+            <CheckBox Name="ChkFetchAllMailboxes" Grid.Column="1" Content="Always get all mailboxes" VerticalAlignment="Center" Foreground="#E0E0E0" Margin="0,0,20,0" ToolTip="If unchecked, you can fetch specific mailboxes by UPN"/>
 
-            <Border BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="3" Padding="10,5,10,8">
-                <StackPanel>
-                    <TextBlock Text="Optional Connection Settings" Foreground="#007ACC" FontWeight="Bold" FontSize="11" Margin="0,0,0,8"/>
-                    <StackPanel Orientation="Horizontal">
-                        <CheckBox Name="ChkDelegated" Content="Delegated Organization:" VerticalAlignment="Center" Foreground="#E0E0E0" Margin="0,0,5,0"/>
-                        <TextBox Name="TxtDelegatedOrg" Width="100" Height="25" Background="#2D2D30" Foreground="White" BorderBrush="#3F3F46" VerticalContentAlignment="Center" Padding="5,0" IsEnabled="False" Margin="0,0,15,0" ToolTip="e.g. contoso.onmicrosoft.com"/>
-                        
-                        <!-- Vertical Separator -->
-                        <Rectangle Width="1" Fill="#3F3F46" Margin="0,2,15,2" VerticalAlignment="Stretch"/>
-
+            <Border Grid.Column="2" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="3" Padding="12,2">
+                <!-- Optional Connection Settings Group -->
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Optional connection settings:" Foreground="#007ACC" FontWeight="Bold" FontSize="11" VerticalAlignment="Center" Margin="0,0,15,0"/>
+                    <CheckBox Name="ChkDelegated" Content="Delegated Org:" VerticalAlignment="Center" Foreground="#E0E0E0" Margin="0,0,5,0"/>
+                    <TextBox Name="TxtDelegatedOrg" Width="130" Height="24" Background="#2D2D30" Foreground="White" BorderBrush="#3F3F46" VerticalContentAlignment="Center" Padding="5,0" IsEnabled="False" Margin="0,0,15,0" ToolTip="e.g. contoso.onmicrosoft.com"/>
+                    <StackPanel Name="AdminUserPanel" Orientation="Horizontal" VerticalAlignment="Center">
                         <TextBlock Text="Admin-User:" VerticalAlignment="Center" Foreground="#E0E0E0" Margin="0,0,5,0"/>
-                        <TextBox Name="TxtUserUPN" Width="180" Height="25" Background="#2D2D30" Foreground="White" BorderBrush="#3F3F46" VerticalContentAlignment="Center" Padding="5,0" Margin="0,0,5,0" ToolTip="Your admin email address"/>
+                        <TextBox Name="TxtUserUPN" Width="180" Height="24" Background="#2D2D30" Foreground="White" BorderBrush="#3F3F46" VerticalContentAlignment="Center" Padding="5,0" Margin="0,0,5,0" ToolTip="Your admin email address"/>
                     </StackPanel>
+                    <!-- Explanation Text -->
+                    <TextBlock Name="DelegatedWarning" Text="(Using Delegated Org doesn't allow pre-defined admin credentials)" Foreground="#AAAAAA" FontStyle="Italic" FontSize="10" VerticalAlignment="Center" Margin="10,0,0,0" Visibility="Collapsed"/>
                 </StackPanel>
             </Border>
-        </StackPanel>
+        </Grid>
 
         <!-- Main Content Area -->
         <Grid Grid.Row="1">
@@ -258,46 +264,76 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
                     <Grid Grid.Row="0" Margin="10,10,10,5">
-                        <TextBlock Text="Mailboxes" FontWeight="Bold" Foreground="#007ACC" FontSize="15"/>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Mailboxes" FontWeight="Bold" Foreground="#007ACC" FontSize="15" VerticalAlignment="Center"/>
+                        <ProgressBar Name="ProgressMailboxesHeader" Grid.Column="1" Height="8" Background="#3F3F46" Foreground="#007ACC" Value="0" Maximum="100" IsIndeterminate="False" Visibility="Collapsed" Margin="10,0,10,0" VerticalAlignment="Center"/>
+                        <TextBlock Name="ProgressMailboxesText" Grid.Column="2" Text="0%" Foreground="#007ACC" FontWeight="Bold" FontSize="12" VerticalAlignment="Center" Visibility="Collapsed" Width="42" TextAlignment="Right"/>
                     </Grid>
 
-                    <!-- Search Bar (new position) -->
-                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="10,0,10,10">
-                        <TextBlock Text="Search:" VerticalAlignment="Center" Foreground="#E0E0E0" Margin="0,0,5,0"/>
-                        <TextBox Name="TxtSearchMailbox" Width="160" Height="25" Background="#2D2D30" Foreground="White" BorderBrush="#3F3F46" VerticalContentAlignment="Center" Padding="5,0" ToolTip="Search by Address or Type"/>
-                        <Button Name="BtnClearSearch" Content="Clear" Height="25" Width="50" Background="#555555" Foreground="White" BorderThickness="0" Margin="5,0,0,0"/>
+                    <!-- Search Bar / UPN Input (toggled based on checkbox) -->
+                    <StackPanel Grid.Row="1" Orientation="Vertical" Margin="10,0,10,10">
+                        <!-- Search Bar (shown when ChkFetchAllMailboxes is checked) -->
+                        <StackPanel Name="SearchBarPanel" Orientation="Vertical">
+                            <TextBlock Text="Search:" Foreground="#E0E0E0" Margin="0,0,0,5"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Name="TxtSearchMailbox" Grid.Column="0" Height="25" Background="#2D2D30" Foreground="White" BorderBrush="#3F3F46" VerticalContentAlignment="Center" Padding="5,0" ToolTip="Search by Address or Type"/>
+                                <Button Name="BtnClearSearch" Grid.Column="1" Content="Clear" Height="25" Width="50" Background="#555555" Foreground="White" BorderThickness="0" Margin="5,0,0,0"/>
+                            </Grid>
+                        </StackPanel>
+                        
+                        <!-- UPN Input (shown when ChkFetchAllMailboxes is unchecked) -->
+                        <StackPanel Name="UPNInputPanel" Orientation="Vertical" Visibility="Collapsed">
+                            <TextBlock Text="Get Mailbox:" Foreground="#E0E0E0" Margin="0,0,0,5"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Name="TxtFetchUPN" Grid.Column="0" Height="25" Background="#2D2D30" Foreground="White" BorderBrush="#3F3F46" VerticalContentAlignment="Center" Padding="5,0" ToolTip="Enter UPN (e.g. user@domain.com)"/>
+                                <Button Name="BtnFetchUPN" Grid.Column="1" Content="Get" Height="25" Width="65" Background="#007ACC" Foreground="White" BorderThickness="0" Margin="5,0,0,0" FontWeight="Bold" Cursor="Hand" FontSize="11"/>
+                            </Grid>
+                        </StackPanel>
                     </StackPanel>
 
+                    <!-- ListView with Mailbox List -->
                     <Grid Grid.Row="2" Margin="5">
-                        <ListView Name="ListMailboxes" Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" SelectionMode="Single">
-                            <ListView.View>
-                                <GridView>
-                                    <GridView.ColumnHeaderContainerStyle>
-                                        <Style TargetType="GridViewColumnHeader">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                        </Style>
-                                    </GridView.ColumnHeaderContainerStyle>
-                                    <GridViewColumn DisplayMemberBinding="{Binding Address}" Width="255"/>
-                                </GridView>
-                            </ListView.View>
-                            <ListView.GroupStyle>
-                                <GroupStyle>
-                                    <GroupStyle.ContainerStyle>
-                                        <Style TargetType="{x:Type GroupItem}">
-                                            <Setter Property="Template">
-                                                <Setter.Value>
-                                                    <ControlTemplate TargetType="{x:Type GroupItem}">
-                                                        <Expander IsExpanded="True" Background="#333337" BorderBrush="#3F3F46" BorderThickness="0,0,0,1" Margin="0,0,0,5">
-                                                            <Expander.Header>
-                                                                <TextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="#007ACC" Margin="5,2" FontSize="14"/>
-                                                            </Expander.Header>
-                                                            <ItemsPresenter />
-                                                        </Expander>
-                                                    </ControlTemplate>
-                                                </Setter.Value>
-                                            </Setter>
-                                        </Style>
-                                    </GroupStyle.ContainerStyle>
+                            <ListView Name="ListMailboxes" Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" SelectionMode="Single">
+                                <ListView.View>
+                                    <GridView>
+                                        <GridView.ColumnHeaderContainerStyle>
+                                            <Style TargetType="GridViewColumnHeader">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </Style>
+                                        </GridView.ColumnHeaderContainerStyle>
+                                        <GridViewColumn DisplayMemberBinding="{Binding Address}" Width="255"/>
+                                    </GridView>
+                                </ListView.View>
+                                <ListView.GroupStyle>
+                                    <GroupStyle>
+                                        <GroupStyle.ContainerStyle>
+                                            <Style TargetType="{x:Type GroupItem}">
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="{x:Type GroupItem}">
+                                                            <Expander IsExpanded="True" Background="#333337" BorderBrush="#3F3F46" BorderThickness="0,0,0,1" Margin="0,0,0,5">
+                                                                <Expander.Header>
+                                                                    <TextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="#007ACC" Margin="5,2" FontSize="14"/>
+                                                                </Expander.Header>
+                                                                <ItemsPresenter />
+                                                            </Expander>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Style>
+                                        </GroupStyle.ContainerStyle>
                                 </GroupStyle>
                             </ListView.GroupStyle>
                         </ListView>
@@ -327,7 +363,7 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                         <Grid Grid.Row="0" Margin="10,10,10,5">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="475"/>
+                                <ColumnDefinition Width="380"/>
                             </Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                                 <TextBlock Text="Mailbox Permissions" FontWeight="Bold" Foreground="#007ACC" FontSize="15" Width="150" VerticalAlignment="Center"/>
@@ -337,7 +373,12 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                             </StackPanel>
                         </Grid>
                         <Grid Grid.Row="1" Margin="5,0,5,5">
-                            <ListView Name="GridMbxPerms" Background="Transparent" Foreground="#E0E0E0" BorderThickness="0" SelectionMode="Single">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="380"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <ListView Name="GridMbxPerms" Grid.Column="0" Background="Transparent" Foreground="#E0E0E0" BorderThickness="0" SelectionMode="Single" ScrollViewer.HorizontalScrollBarVisibility="Auto">
                                 <ListView.View>
                                     <GridView>
                                         <GridViewColumn Header="User (UPN)" Width="230" DisplayMemberBinding="{Binding User}"/>
@@ -364,7 +405,7 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                         <Grid Grid.Row="0" Margin="10,10,10,5">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="475"/>
+                                <ColumnDefinition Width="380"/>
                             </Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                                 <TextBlock Text="Calendar Permissions" FontWeight="Bold" Foreground="#007ACC" FontSize="15" Width="165" VerticalAlignment="Center"/>
@@ -372,12 +413,12 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                                 <Button Name="BtnEditCal" Content="Edit" Height="22" Width="50" Background="#FFB13B" Foreground="White" BorderThickness="0" FontSize="10" Cursor="Hand" FontWeight="Bold"/>
                                 <Button Name="BtnRemoveCal" Content="Remove" Height="22" Width="50" Margin="5,0,0,0" Background="#FF6B68" Foreground="White" BorderThickness="0" FontSize="10" Cursor="Hand" FontWeight="Bold"/>
                             </StackPanel>
-                            <TextBlock Grid.Column="1" Text="Definitions" FontWeight="Bold" Foreground="#007ACC" Margin="20,0,0,0" FontSize="15" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1" Text="Definitions" FontWeight="Bold" Foreground="#007ACC" Margin="24,0,0,0" FontSize="15" VerticalAlignment="Center"/>
                         </Grid>
                         <Grid Grid.Row="1" Margin="5,0,5,5">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="475"/>
+                                <ColumnDefinition Width="380"/>
                             </Grid.ColumnDefinitions>
                             
                             <Grid Grid.Column="0">
@@ -385,7 +426,7 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                                     <ListView.View>
                                         <GridView>
                                             <GridViewColumn Header="User (UPN)" Width="230" DisplayMemberBinding="{Binding User}"/>
-                                            <GridViewColumn Header="Calendar Roles" Width="180" DisplayMemberBinding="{Binding AccessRights}"/>
+                                            <GridViewColumn Header="Calendar Roles" Width="420" DisplayMemberBinding="{Binding AccessRights}"/>
                                         </GridView>
                                     </ListView.View>
                                 </ListView>
@@ -395,13 +436,12 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                             <!-- Legend Column -->
                             <Border Grid.Column="1" BorderBrush="#3F3F46" BorderThickness="1,0,0,0" Margin="10,0,0,5" Padding="10,0,0,0">
                                     <StackPanel>
-                                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#AAAAAA" Margin="0,0,0,4">
-                                            <Run FontWeight="Bold" Foreground="#E0E0E0">Default:</Run> All internal users
+                                        <TextBlock Text="SPECIAL USERS" FontSize="9" FontWeight="Bold" Foreground="#007ACC" Margin="0,0,0,2"/>
+                                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#AAAAAA" Margin="0,0,0,12">
+                                            <Run FontWeight="Bold" Foreground="#E0E0E0">Default:</Run> All internal users<LineBreak/>
+                                            <Run FontWeight="Bold" Foreground="#E0E0E0">Anonymous:</Run> All external users (everyone)
                                         </TextBlock>
-                                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#AAAAAA" Margin="0,0,0,5">
-                                            <Run FontWeight="Bold" Foreground="#E0E0E0">Anonymous:</Run> All external users (= everyone in the world (!))
-                                        </TextBlock>
-
+                                        <TextBlock Text="ROLE DEFINITIONS" FontSize="9" FontWeight="Bold" Foreground="#007ACC" Margin="0,0,0,2"/>
                                         <TextBlock FontSize="11" TextWrapping="Wrap" Foreground="#AAAAAA">
                                             <Run FontWeight="Bold" Foreground="#E0E0E0">Author:</Run> CreateItems, DeleteOwnedItems, EditOwnedItems, FolderVisible, ReadItems<LineBreak/>
                                             <Run FontWeight="Bold" Foreground="#E0E0E0">Contributor:</Run> CreateItems, FolderVisible<LineBreak/>
@@ -438,11 +478,20 @@ $Window = [Windows.Markup.XamlReader]::Load($reader)
 # Map XAML Elements to Variables
 $BtnConnect = $Window.FindName("BtnConnect")
 $ChkDelegated = $Window.FindName("ChkDelegated")
+$ChkFetchAllMailboxes = $Window.FindName("ChkFetchAllMailboxes")
 $TxtDelegatedOrg = $Window.FindName("TxtDelegatedOrg")
 $TxtUserUPN = $Window.FindName("TxtUserUPN")
+$AdminUserPanel = $Window.FindName("AdminUserPanel")
+$DelegatedWarning = $Window.FindName("DelegatedWarning")
 $ListMailboxes = $Window.FindName("ListMailboxes")
 $TxtSearchMailbox = $Window.FindName("TxtSearchMailbox")
+$TxtFetchUPN = $Window.FindName("TxtFetchUPN")
 $BtnClearSearch = $Window.FindName("BtnClearSearch")
+$BtnFetchUPN = $Window.FindName("BtnFetchUPN")
+$SearchBarPanel = $Window.FindName("SearchBarPanel")
+$UPNInputPanel = $Window.FindName("UPNInputPanel")
+$ProgressMailboxesHeader = $Window.FindName("ProgressMailboxesHeader")
+$ProgressMailboxesText = $Window.FindName("ProgressMailboxesText")
 $GridMbxPerms = $Window.FindName("GridMbxPerms")
 $GridCalPerms = $Window.FindName("GridCalPerms")
 $BtnAddMbx = $Window.FindName("BtnAddMbx")
@@ -461,6 +510,7 @@ function Save-ManagerSettings {
         UseDelegated = [bool]$ChkDelegated.IsChecked
         Org          = $TxtDelegatedOrg.Text
         UserUPN      = $TxtUserUPN.Text
+        FetchAll     = [bool]$ChkFetchAllMailboxes.IsChecked
     }
     $settings | ConvertTo-Json | Set-Content $settingsFile -ErrorAction SilentlyContinue
 }
@@ -471,13 +521,18 @@ $SyncHash.Window = $Window
 $SyncHash.ListMailboxes = $ListMailboxes
 $SyncHash.BtnConnect = $BtnConnect
 $SyncHash.TxtSearchMailbox = $TxtSearchMailbox
+$SyncHash.TxtFetchUPN = $TxtFetchUPN
 $SyncHash.BtnClearSearch = $BtnClearSearch
+$SyncHash.BtnFetchUPN = $BtnFetchUPN
+$SyncHash.ProgressMailboxesHeader = $ProgressMailboxesHeader
+$SyncHash.ProgressMailboxesText = $ProgressMailboxesText
 $SyncHash.StatusMbx = $StatusMbx
 $SyncHash.StatusCal = $StatusCal
 $SyncHash.StatusMailboxes = $StatusMailboxes
 $SyncHash.GridMbxPerms = $GridMbxPerms
 $SyncHash.GridCalPerms = $GridCalPerms
 $SyncHash.AllMailboxes = [System.Collections.ObjectModel.ObservableCollection[object]]::new()
+$SyncHash.FetchedUPNs = [System.Collections.ObjectModel.ObservableCollection[string]]::new()
 
 # --- Load Saved Settings ---
 if (Test-Path $settingsFile) {
@@ -486,6 +541,7 @@ if (Test-Path $settingsFile) {
         $ChkDelegated.IsChecked = $settings.UseDelegated
         $TxtDelegatedOrg.Text = $settings.Org
         $TxtUserUPN.Text = $settings.UserUPN
+        $ChkFetchAllMailboxes.IsChecked = if ($null -eq $settings.FetchAll) { $true } else { $settings.FetchAll }
         if ($settings.UseDelegated) { $TxtDelegatedOrg.IsEnabled = $true }
     }
     catch {
@@ -870,11 +926,10 @@ $SyncHash.GetPermissionsAsync = {
                     }
 
                     $mCount = $usersHash.Count
-                    $SyncHash.Window.Dispatcher.Invoke([Action[object, int, string]] {
-                            param($hash, $count, $targetMbx)
-                            if ($SyncHash.CurrentTargetMbx -ne $targetMbx) { return }
-                            Write-Host "[$(Get-Date -f HH:mm:ss)] Loaded $count users with mailbox/send permissions." -ForegroundColor Gray
-                            foreach ($entry in $hash.Values) {
+                    $SyncHash.Window.Dispatcher.Invoke({
+                            if ($SyncHash.CurrentTargetMbx -ne $mbx) { return }
+                            Write-Host "[$(Get-Date -f HH:mm:ss)] Loaded $mCount users with mailbox/send permissions." -ForegroundColor Gray
+                            foreach ($entry in $usersHash.Values) {
                                 $rightsStr = ($entry.AccessRights | Select-Object -Unique | Sort-Object) -join ", "
                                 if (-not $rightsStr) { $rightsStr = "None" }
                                 $SyncHash.GridMbxPerms.Items.Add([PSCustomObject]@{
@@ -882,13 +937,13 @@ $SyncHash.GetPermissionsAsync = {
                                     }) | Out-Null
                             }
                             $SyncHash.StatusMbx.Text = ""
-                        }, $usersHash, $mCount, $mbx)
+                        })
                 }
 
                 if ($doCal) {
                     Write-Host "[$(Get-Date -f HH:mm:ss)] DEBUG: Locating calendar folder for $mbx..." -ForegroundColor Gray
                     $rawCalFolders = Get-EXOMailboxFolderStatistics -Identity $mbx -FolderScope Calendar -ErrorAction Stop
-                    
+
                     if ($null -eq $rawCalFolders -or $rawCalFolders.Count -eq 0) {
                         $SyncHash.Window.Dispatcher.Invoke({ 
                                 Write-Host "[$(Get-Date -f HH:mm:ss)] WARNING: No calendar folder found for $mbx" -ForegroundColor Yellow 
@@ -903,11 +958,10 @@ $SyncHash.GetPermissionsAsync = {
                             $calPerms = Get-EXOMailboxFolderPermission -Identity $calPath -ErrorAction Stop | Where-Object { $_.User -notlike "NT AUTHORITY\*" }
                             $cCount = @($calPerms).Count
                     
-                            $SyncHash.Window.Dispatcher.Invoke([Action[string, object, int, string]] {
-                                    param($fName, $perms, $count, $targetMbx)
-                                    if ($SyncHash.CurrentTargetMbx -ne $targetMbx) { return }
-                                    Write-Host "[$(Get-Date -f HH:mm:ss)] Found calendar folder: $fName. Loaded $count permissions." -ForegroundColor Gray
-                                    foreach ($p in $perms) {
+                            $SyncHash.Window.Dispatcher.Invoke({
+                                    if ($SyncHash.CurrentTargetMbx -ne $mbx) { return }
+                                    Write-Host "[$(Get-Date -f HH:mm:ss)] Found calendar folder: $($calFolder.Name). Loaded $cCount permissions." -ForegroundColor Gray
+                                    foreach ($p in $calPerms) {
                                         $userDisp = if ($p.User.UserPrincipalName) { $p.User.UserPrincipalName }
                                         elseif ($p.User.ToString() -match "Default") { "Default" }
                                         elseif ($p.User.ToString() -match "Anonymous") { "Anonymous" }
@@ -915,7 +969,7 @@ $SyncHash.GetPermissionsAsync = {
                                         $SyncHash.GridCalPerms.Items.Add([PSCustomObject]@{User = $userDisp; AccessRights = ($p.AccessRights -join ', ') }) | Out-Null
                                     }
                                     $SyncHash.StatusCal.Text = ""
-                                }, $calFolder.Name, $calPerms, $cCount, $mbx)
+                                })
                         }
                         else {
                             $SyncHash.Window.Dispatcher.Invoke({ 
@@ -1210,10 +1264,55 @@ $BtnRemoveCal.Add_Click({
     })
 
 # --- Event: Connectivity & Persistence Hooks ---
-$ChkDelegated.Add_Checked({ $TxtDelegatedOrg.IsEnabled = $true; Save-ManagerSettings })
-$ChkDelegated.Add_Unchecked({ $TxtDelegatedOrg.IsEnabled = $false; Save-ManagerSettings })
+$ChkDelegated.Add_Checked({
+        $TxtDelegatedOrg.IsEnabled = $true
+        $AdminUserPanel.Visibility = "Collapsed"
+        $DelegatedWarning.Visibility = "Visible"
+        Save-ManagerSettings
+    })
+
+$ChkDelegated.Add_Unchecked({
+        $TxtDelegatedOrg.IsEnabled = $false
+        $AdminUserPanel.Visibility = "Visible"
+        $DelegatedWarning.Visibility = "Collapsed"
+        Save-ManagerSettings
+    })
 $TxtDelegatedOrg.Add_TextChanged({ Save-ManagerSettings })
 $TxtUserUPN.Add_TextChanged({ Save-ManagerSettings })
+
+# --- Event: Toggle between Search and UPN Input ---
+$ChkFetchAllMailboxes.Add_Checked({
+        Save-ManagerSettings
+        $SearchBarPanel.Visibility = "Visible"
+        $UPNInputPanel.Visibility = "Collapsed"
+    })
+
+$ChkFetchAllMailboxes.Add_Unchecked({
+        Save-ManagerSettings
+        $SearchBarPanel.Visibility = "Collapsed"
+        $UPNInputPanel.Visibility = "Visible"
+    })
+
+# Initialize visibility based on checkbox state
+if ($ChkFetchAllMailboxes.IsChecked) {
+    $SearchBarPanel.Visibility = "Visible"
+    $UPNInputPanel.Visibility = "Collapsed"
+}
+
+# Initialize Admin-User textbox state based on ChkDelegated
+if ($ChkDelegated.IsChecked) {
+    $AdminUserPanel.Visibility = "Collapsed"
+    $DelegatedWarning.Visibility = "Visible"
+}
+else {
+    $AdminUserPanel.Visibility = "Visible"
+    $DelegatedWarning.Visibility = "Collapsed"
+}
+
+if (-not $ChkFetchAllMailboxes.IsChecked) {
+    $SearchBarPanel.Visibility = "Collapsed"
+    $UPNInputPanel.Visibility = "Visible"
+}
 
 # --- Event: Connect & Fetch Mailboxes (ASYNC) ---
 $BtnConnect.Add_Click({
@@ -1239,7 +1338,8 @@ $BtnConnect.Add_Click({
         $Delegated = [bool]$ChkDelegated.IsChecked
         $Org = $TxtDelegatedOrg.Text.Trim()
         $UserUPN = $TxtUserUPN.Text.Trim()
-        Write-Host "[$(Get-Date -f HH:mm:ss)] Attempting to connect to Exchange (Delegated: $Delegated)..." -ForegroundColor Cyan
+        $FetchAll = [bool]$ChkFetchAllMailboxes.IsChecked
+        Write-Host "[$(Get-Date -f HH:mm:ss)] Attempting to connect to Exchange (Delegated: $Delegated, FetchAll: $FetchAll)..." -ForegroundColor Cyan
 
         Save-ManagerSettings
 
@@ -1247,9 +1347,10 @@ $BtnConnect.Add_Click({
         $SyncHash.ConnectDelegated = $Delegated
         $SyncHash.ConnectOrg = $Org
         $SyncHash.TargetUPN = $UserUPN
+        $SyncHash.FetchAllMailboxes = $FetchAll
 
         $PowerShell = [powershell]::Create().AddScript({
-                param($Delegated, $Org, $UserUPN, $SyncHash)
+                param($Delegated, $Org, $UserUPN, $SyncHash, $FetchAll)
                 Import-Module ExchangeOnlineManagement
         
                 try {
@@ -1257,15 +1358,8 @@ $BtnConnect.Add_Click({
 
                     if ($Delegated -and (-not [string]::IsNullOrWhiteSpace($Org))) { 
                         $connParams["DelegatedOrganization"] = $Org 
-                        
-                        # When connecting to a delegated organization, to ensure the login prompt
-                        # displays the delegated organization's branding, we should not pass
-                        # -UserPrincipalName or -Organization. The user will need to manually
-                        # enter their partner UPN in the interactive login window.
-                        # This also avoids the "Admin account chosen for authentication is different" error.
                     }
                     else {
-                        # For direct connections (not delegated), use UserPrincipalName if provided.
                         if (-not [string]::IsNullOrWhiteSpace($UserUPN)) { 
                             $connParams["UserPrincipalName"] = $UserUPN 
                         }
@@ -1273,9 +1367,9 @@ $BtnConnect.Add_Click({
 
                     Connect-ExchangeOnline @connParams
 
-                    $SyncHash.Window.Dispatcher.Invoke({ Write-Host "[$(Get-Date -f HH:mm:ss)] Connected. Fetching all mailboxes..." -ForegroundColor Green })
+                    $SyncHash.Window.Dispatcher.Invoke({ Write-Host "[$(Get-Date -f HH:mm:ss)] Connected." -ForegroundColor Green })
 
-                    # Capture the actual UPN used to login. This allows other runspaces to sync silently.
+                    # Capture the actual UPN used to login
                     $info = Get-ConnectionInformation | Select-Object -First 1
                     $SyncHash.ConnectedUser = $info.UserPrincipalName
                     Write-Host "[$(Get-Date -f HH:mm:ss)] Session Identity: $($SyncHash.ConnectedUser)" -ForegroundColor Gray
@@ -1297,57 +1391,97 @@ $BtnConnect.Add_Click({
                             $SyncHash.BtnConnect.Background = "#28A745" # Success Green
                             $SyncHash.BtnConnect.Foreground = "White"
                             $SyncHash.BtnConnect.IsHitTestVisible = $true
-                            $SyncHash.StatusMailboxes.Text = "(Fetching...)"
                         })
 
-                    # Fetch all Mailboxes
-                    $allMailboxes = Get-Mailbox -ResultSize Unlimited | Select-Object PrimarySmtpAddress, RecipientTypeDetails
+                    # Fetch mailboxes only if FetchAll is true
+                    if ($FetchAll) {
+                        $SyncHash.Window.Dispatcher.Invoke({
+                                $SyncHash.StatusMailboxes.Text = "(Fetching list...)"
+                                $SyncHash.ProgressMailboxesHeader.Visibility = "Visible"
+                                $SyncHash.ProgressMailboxesHeader.IsIndeterminate = $true
+                                $SyncHash.ProgressMailboxesText.Visibility = "Collapsed"
+                            })
 
-                    # Filter and categorize mailboxes
-                    $filteredMailboxes = [System.Collections.ArrayList]::new()
-                    foreach ($mbx in $allMailboxes) {
-                        # Map RecipientTypeDetails to user-friendly group names and assign a sort order
-                        $groupName = switch ($mbx.RecipientTypeDetails) {
-                            "UserMailbox" { "User" }
-                            "SharedMailbox" { "Shared" }
-                            "RoomMailbox" { "Room & Equipment" }
-                            "EquipmentMailbox" { "Room & Equipment" }
-                            Default { "Other" }
-                        }
+                        Write-Host "[$(Get-Date -f HH:mm:ss)] Fetching all mailboxes..." -ForegroundColor Green
                         
-                        $sortOrder = switch ($groupName) {
-                            "User" { 1 }
-                            "Shared" { 2 }
-                            "Room & Equipment" { 3 }
-                            "Other" { 4 }
-                            Default { 99 } # Fallback for any unhandled group names, though "Other" should catch all
+                        # Fetch all Mailboxes
+                        $allMailboxes = @(Get-EXOMailbox -ResultSize Unlimited | Select-Object PrimarySmtpAddress, RecipientTypeDetails)
+                        
+                        $SyncHash.Window.Dispatcher.Invoke({
+                                $SyncHash.ProgressMailboxesHeader.IsIndeterminate = $false
+                                $SyncHash.ProgressMailboxesText.Visibility = "Visible"
+                                $SyncHash.StatusMailboxes.Text = "(Processing results...)"
+                            })
+
+                        $totalCount = $allMailboxes.Count
+                        $currentIndex = 0
+
+                        # Filter and categorize mailboxes
+                        $filteredMailboxes = [System.Collections.ArrayList]::new()
+                        foreach ($mbx in $allMailboxes) {
+                            $currentIndex++
+                            $progressPercent = [math]::Min(100, [math]::Round(($currentIndex / $totalCount) * 100))
+                            
+                            # Map RecipientTypeDetails to user-friendly group names and assign a sort order
+                            $groupName = switch ($mbx.RecipientTypeDetails) {
+                                "UserMailbox" { "User" }
+                                "SharedMailbox" { "Shared" }
+                                "RoomMailbox" { "Room & Equipment" }
+                                "EquipmentMailbox" { "Room & Equipment" }
+                                Default { "Other" }
+                            }
+                            
+                            $sortOrder = switch ($groupName) {
+                                "User" { 1 }
+                                "Shared" { 2 }
+                                "Room & Equipment" { 3 }
+                                "Other" { 4 }
+                                Default { 99 }
+                            }
+
+                            $null = $filteredMailboxes.Add([PSCustomObject]@{
+                                    Address      = $mbx.PrimarySmtpAddress;
+                                    Type         = $groupName;
+                                    OriginalType = $mbx.RecipientTypeDetails;
+                                    SortOrder    = $sortOrder
+                                }
+                            )
+                            
+                            # Update progress UI
+                            if ($currentIndex % [math]::Max(1, [math]::Floor($totalCount / 20)) -eq 0 -or $currentIndex -eq $totalCount) {
+                                $SyncHash.Window.Dispatcher.InvokeAsync({
+                                        $SyncHash.ProgressMailboxesHeader.Value = $progressPercent
+                                        $SyncHash.ProgressMailboxesText.Text = "$progressPercent%"
+                                    }) | Out-Null
+                            }
                         }
 
-                        $null = $filteredMailboxes.Add([PSCustomObject]@{
-                                Address      = $mbx.PrimarySmtpAddress;
-                                Type         = $groupName; # Use the mapped group name for sorting/grouping
-                                OriginalType = $mbx.RecipientTypeDetails; # Keep original for potential future use
-                                SortOrder    = $sortOrder
-                            }
-                        )
-                    } # End of foreach ($mbx in $allMailboxes)
+                        # Sort mailboxes alphabetically by Type and then by Address
+                        $sortedMailboxes = $filteredMailboxes | Sort-Object SortOrder, Address
 
-                    # Sort mailboxes alphabetically by Type and then by Address
-                    $sortedMailboxes = $filteredMailboxes | Sort-Object SortOrder, Address
+                        $SyncHash.Window.Dispatcher.Invoke({
+                                Write-Host "[$(Get-Date -f HH:mm:ss)] Loaded $($sortedMailboxes.Count) mailboxes into sections." -ForegroundColor Gray
 
-                    $SyncHash.Window.Dispatcher.Invoke({
-                            Write-Host "[$(Get-Date -f HH:mm:ss)] Loaded $($sortedMailboxes.Count) mailboxes into sections." -ForegroundColor Gray
+                                # Update ObservableCollection
+                                $SyncHash.AllMailboxes.Clear()
+                                foreach ($item in $sortedMailboxes) { $SyncHash.AllMailboxes.Add($item) }
 
-                            # Update ObservableCollection (UI will update automatically via binding)
-                            $SyncHash.AllMailboxes.Clear()
-                            foreach ($item in $sortedMailboxes) { $SyncHash.AllMailboxes.Add($item) }
+                                # Refresh the view
+                                $view = [System.Windows.Data.CollectionViewSource]::GetDefaultView($SyncHash.AllMailboxes)
+                                $view.Refresh()
 
-                            # Refresh the view to apply current filter to new items
-                            $view = [System.Windows.Data.CollectionViewSource]::GetDefaultView($SyncHash.AllMailboxes)
-                            $view.Refresh()
-
-                            $SyncHash.StatusMailboxes.Text = ""
-                        })
+                                $SyncHash.StatusMailboxes.Text = ""
+                                $SyncHash.ProgressMailboxesHeader.Visibility = "Collapsed"
+                                $SyncHash.ProgressMailboxesText.Visibility = "Collapsed"
+                            })
+                    }
+                    else {
+                        $SyncHash.Window.Dispatcher.Invoke({
+                                $SyncHash.StatusMailboxes.Text = ""
+                                $SyncHash.ProgressMailboxesHeader.Visibility = "Collapsed"
+                                $SyncHash.ProgressMailboxesText.Visibility = "Collapsed"
+                            })
+                    }
                 }
                 catch {
                     $err = $_.Exception.Message
@@ -1358,9 +1492,11 @@ $BtnConnect.Add_Click({
                             $SyncHash.BtnConnect.IsHitTestVisible = $true
                             $SyncHash.BtnConnect.Foreground = "White"
                             $SyncHash.StatusMailboxes.Text = "(Error)"
+                            $SyncHash.ProgressMailboxesHeader.Visibility = "Collapsed"
+                            $SyncHash.ProgressMailboxesText.Visibility = "Collapsed"
                         })
                 }
-            }).AddArgument($Delegated).AddArgument($Org).AddArgument($UserUPN).AddArgument($SyncHash)
+            }).AddArgument($Delegated).AddArgument($Org).AddArgument($UserUPN).AddArgument($SyncHash).AddArgument($FetchAll)
 
         $PowerShell.RunspacePool = $Pool
         $AsyncResult = $PowerShell.BeginInvoke()
@@ -1399,6 +1535,91 @@ $BtnClearSearch.Add_Click({
         $SearchTimer.Stop()
         $view = [System.Windows.Data.CollectionViewSource]::GetDefaultView($SyncHash.AllMailboxes)
         $view.Filter = $null
+    })
+
+# --- Event: Fetch specific UPN ---
+$BtnFetchUPN.Add_Click({
+        $upn = $TxtFetchUPN.Text.Trim()
+        if ([string]::IsNullOrWhiteSpace($upn)) {
+            [System.Windows.MessageBox]::Show("Please enter a UPN (e.g. user@domain.com)") | Out-Null
+            return
+        }
+
+        $BtnFetchUPN.IsHitTestVisible = $false
+        $BtnFetchUPN.Content = "Fetching..."
+        $StatusMailboxes.Text = "(Fetching...)"
+        $ProgressMailboxesHeader.Visibility = "Collapsed"
+        $ProgressMailboxesText.Visibility = "Collapsed"
+
+        $PowerShell = [powershell]::Create().AddScript({
+                param($upn, $SyncHash)
+                Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
+
+                try {
+                    Write-Host "[$(Get-Date -f HH:mm:ss)] Fetching mailbox: $upn" -ForegroundColor Green
+                    $mbx = Get-EXOMailbox -Identity $upn -ErrorAction Stop | Select-Object PrimarySmtpAddress, RecipientTypeDetails
+
+                    $groupName = switch ($mbx.RecipientTypeDetails) {
+                        "UserMailbox" { "User" }
+                        "SharedMailbox" { "Shared" }
+                        "RoomMailbox" { "Room & Equipment" }
+                        "EquipmentMailbox" { "Room & Equipment" }
+                        Default { "Other" }
+                    }
+                    
+                    $sortOrder = switch ($groupName) {
+                        "User" { 1 }
+                        "Shared" { 2 }
+                        "Room & Equipment" { 3 }
+                        "Other" { 4 }
+                        Default { 99 }
+                    }
+
+                    $mailboxObj = [PSCustomObject]@{
+                        Address      = $mbx.PrimarySmtpAddress
+                        Type         = $groupName
+                        OriginalType = $mbx.RecipientTypeDetails
+                        SortOrder    = $sortOrder
+                    }
+
+                    $SyncHash.Window.Dispatcher.Invoke({
+                            # Check if this UPN already exists
+                            $existing = $SyncHash.AllMailboxes | Where-Object { $_.Address -eq $mailboxObj.Address }
+                            
+                            if (-not $existing) {
+                                $SyncHash.AllMailboxes.Add($mailboxObj)
+                                $SyncHash.ListMailboxes.SelectedItem = $mailboxObj
+                                Write-Host "[$(Get-Date -f HH:mm:ss)] Added mailbox: $($mailboxObj.Address)" -ForegroundColor Green
+                            }
+                            else {
+                                $SyncHash.ListMailboxes.SelectedItem = $existing
+                                Write-Host "[$(Get-Date -f HH:mm:ss)] Mailbox already in list: $($mailboxObj.Address)" -ForegroundColor Yellow
+                            }
+
+                            # Refresh the view
+                            $view = [System.Windows.Data.CollectionViewSource]::GetDefaultView($SyncHash.AllMailboxes)
+                            $view.Refresh()
+
+                            $SyncHash.StatusMailboxes.Text = ""
+                            $SyncHash.BtnFetchUPN.Content = "Get"
+                            $SyncHash.BtnFetchUPN.IsHitTestVisible = $true
+                            $SyncHash.TxtFetchUPN.Text = ""
+                        })
+                }
+                catch {
+                    $err = $_.Exception.Message
+                    $SyncHash.Window.Dispatcher.Invoke({
+                            Write-Host "[$(Get-Date -f HH:mm:ss)] ERROR fetching UPN: $err" -ForegroundColor Red
+                            [System.Windows.MessageBox]::Show("Error fetching mailbox:`n$err", "Error", "OK", "Error") | Out-Null
+                            $SyncHash.StatusMailboxes.Text = ""
+                            $SyncHash.BtnFetchUPN.Content = "Get"
+                            $SyncHash.BtnFetchUPN.IsHitTestVisible = $true
+                        })
+                }
+            }).AddArgument($upn).AddArgument($SyncHash)
+
+        $PowerShell.RunspacePool = $Pool
+        $PowerShell.BeginInvoke() | Out-Null
     })
 
 # --- Event: Select Mailbox (ASYNC) ---
