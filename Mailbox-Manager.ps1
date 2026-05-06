@@ -937,9 +937,26 @@ $SyncHash.GetPermissionsAsync = {
 
                     $usersHash = [ordered]@{}
                     
+                    # Helper to normalize identities (resolve SamAccountName/DN/SID to UPN)
+                    $NormalizeId = {
+                        param($id, $targetMbx)
+                        if ($null -eq $id) { return $null }
+                        $s = $id.ToString()
+                        if ($s -match "SELF") { return $targetMbx }
+                        $clean = $s.Split(':')[-1]
+                        # If it's already a UPN, return it immediately
+                        if ($clean -match '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$') { return $clean }
+                        # Try to resolve non-UPN identities to PrimarySmtpAddress for consolidation
+                        try {
+                            $rec = Get-Recipient -Identity $clean -ErrorAction SilentlyContinue | Select-Object -First 1
+                            if ($rec.PrimarySmtpAddress) { return $rec.PrimarySmtpAddress.ToString() }
+                        }
+                        catch {}
+                        return $clean
+                    }
+                    
                     foreach ($p in $mbxPerms) {
-                        $uStr = $p.User.ToString()
-                        $userDisp = if ($uStr -match "SELF") { $mbx } else { $uStr.Split(':')[-1] }
+                        $userDisp = &$NormalizeId $p.User $mbx
                         if (-not $usersHash.Contains($userDisp)) {
                             $usersHash[$userDisp] = @{ User = $userDisp; AccessRights = [System.Collections.Generic.List[string]]::new(); SendRights = "None" }
                         }
@@ -947,8 +964,7 @@ $SyncHash.GetPermissionsAsync = {
                     }
                     
                     foreach ($p in $recPerms) {
-                        $tStr = $p.Trustee.ToString()
-                        $userDisp = if ($tStr -match "SELF") { $mbx } else { $tStr.Split(':')[-1] }
+                        $userDisp = &$NormalizeId $p.Trustee $mbx
                         if (-not $usersHash.Contains($userDisp)) {
                             $usersHash[$userDisp] = @{ User = $userDisp; AccessRights = [System.Collections.Generic.List[string]]::new(); SendRights = "SendAs" }
                         }
@@ -958,8 +974,7 @@ $SyncHash.GetPermissionsAsync = {
                     }
                     
                     foreach ($u in $mbxObj.GrantSendOnBehalfTo) {
-                        $uStr = $u.ToString()
-                        $userDisp = if ($uStr -match "SELF") { $mbx } else { $uStr.Split(':')[-1] }
+                        $userDisp = &$NormalizeId $u $mbx
                         if (-not $usersHash.Contains($userDisp)) {
                             $usersHash[$userDisp] = @{ User = $userDisp; AccessRights = [System.Collections.Generic.List[string]]::new(); SendRights = "SendOnBehalf" }
                         }
