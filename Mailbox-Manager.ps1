@@ -612,15 +612,12 @@ function Show-PermissionDialog {
         [object[]]$UserList = @()
     )
 
-    $winHeight = 245
-    if ($ShowAutomapping) { $winHeight += 65 }
-    if ($ShowSendRights) { $winHeight += 85 } # Extra height for separation
     $autoVisibility = if ($ShowAutomapping) { "Visible" } else { "Collapsed" }
     $sendVisibility = if ($ShowSendRights) { "Visible" } else { "Collapsed" }
     $rightsMargin = "0,0,0,15"
 
     [xml]$DialogXaml = @"
-    <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="$Title" Height="$winHeight" Width="280" Background="#1E1E1E" Foreground="White" WindowStartupLocation="CenterOwner" ResizeMode="NoResize">
+    <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="$Title" SizeToContent="Height" Width="280" Background="#1E1E1E" Foreground="White" WindowStartupLocation="CenterOwner" ResizeMode="NoResize">
         <Window.Resources>
             <!-- Modern Minimalist ScrollBar & ScrollViewer Styles -->
             <Style x:Key="ModernScrollBarThumb" TargetType="{x:Type Thumb}">
