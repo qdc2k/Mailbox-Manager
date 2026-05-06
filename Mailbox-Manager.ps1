@@ -339,11 +339,10 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                         <Border Name="CooldownOverlay" Background="#2D2D30" BorderBrush="#FFB13B" BorderThickness="1" CornerRadius="3" Visibility="Collapsed"
                                 HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                                 Margin="0">
-                            <TextBlock Name="CooldownMessage" 
-                                       Text="COOLDOWN`n`nPlease wait 2 seconds between requests" 
-                                       Foreground="#FFB13B" FontWeight="Bold" FontSize="13" 
-                                       HorizontalAlignment="Center" VerticalAlignment="Center" 
-                                       TextAlignment="Center" TextWrapping="Wrap"/>
+                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                <TextBlock Name="CooldownHeader" Text="WARNING!" Foreground="#FFB13B" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                                <TextBlock Name="CooldownSubtext" Text="Wait at least 2 seconds between requests to prevent throttling by Exchange Online." Foreground="#E0E0E0" FontSize="12" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Margin="15,0"/>
+                            </StackPanel>
                         </Border>
 
                         <TextBlock Name="StatusMailboxes" Text="" Foreground="#AAAAAA" FontStyle="Italic" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="14" IsHitTestVisible="False"/>
@@ -508,7 +507,6 @@ $StatusMbx = $Window.FindName("StatusMbx")
 $StatusCal = $Window.FindName("StatusCal")
 $StatusMailboxes = $Window.FindName("StatusMailboxes")
 $CooldownOverlay = $Window.FindName("CooldownOverlay") # New
-$CooldownMessage = $Window.FindName("CooldownMessage") # New
 
 # --- Helper: Save Settings ---
 function Save-ManagerSettings {
@@ -545,7 +543,6 @@ $SyncHash.StatusMbx = $StatusMbx
 $SyncHash.StatusCal = $StatusCal
 $SyncHash.StatusMailboxes = $StatusMailboxes
 $SyncHash.CooldownOverlay = $CooldownOverlay # New
-$SyncHash.CooldownMessage = $CooldownMessage # New
 $SyncHash.GridMbxPerms = $GridMbxPerms
 $SyncHash.GridCalPerms = $GridCalPerms
 $SyncHash.AllMailboxes = [System.Collections.ObjectModel.ObservableCollection[object]]::new()
@@ -553,6 +550,7 @@ $SyncHash.FetchedUPNs = [System.Collections.ObjectModel.ObservableCollection[str
 $SyncHash.AddressCache = [System.Collections.Generic.List[string]]::new()
 $SyncHash.LastFetchId = 0 # Add this line to track the latest fetch request
 $SyncHash.LastManualFetchTime = [datetime]::MinValue
+$SyncHash.CooldownTargetMailbox = $null # To store the mailbox that triggered a cooldown
 
 # --- Load Saved Settings ---
 if (Test-Path $settingsFile) {
@@ -967,18 +965,32 @@ $SyncHash.GetPermissionsAsync = {
             $SyncHash.StatusMbx.Text = ""
             $SyncHash.StatusCal.Text = ""
 
+            # Store the mailbox that triggered the cooldown, then clear current selection
+            $SyncHash.CooldownTargetMailbox = $Mailbox
+            $SyncHash.Window.Dispatcher.Invoke({
+                    $SyncHash.ListMailboxes.SelectedItem = $null
+                })
+
             # Display the cooldown overlay
             $SyncHash.CooldownOverlay.Visibility = [System.Windows.Visibility]::Visible
-            $SyncHash.CooldownMessage.Text = "COOLDOWN`n`nPlease wait 2 seconds between requests"
-            
             $timer = New-Object System.Windows.Threading.DispatcherTimer
-            $timer.Interval = [TimeSpan]::FromSeconds(1.5)
+            $timer.Interval = [TimeSpan]::FromSeconds(4)
             $timer.Add_Tick({
                     $this.Stop()
                     # Only hide the overlay if it's currently visible (i.e., still in cooldown state)
                     if ($SyncHash.CooldownOverlay.Visibility -eq [System.Windows.Visibility]::Visible) {
                         $SyncHash.CooldownOverlay.Visibility = [System.Windows.Visibility]::Collapsed
                         $SyncHash.ListMailboxes.Visibility = [System.Windows.Visibility]::Visible
+
+                        # Restore selection to the mailbox that triggered the cooldown
+                        if ($SyncHash.CooldownTargetMailbox) {
+                            $targetMbxAddress = $SyncHash.CooldownTargetMailbox
+                            $selectedItem = $SyncHash.AllMailboxes | Where-Object { $_.Address -eq $targetMbxAddress } | Select-Object -First 1
+                            if ($selectedItem) {
+                                $SyncHash.ListMailboxes.SelectedItem = $selectedItem
+                            }
+                            $SyncHash.CooldownTargetMailbox = $null # Clear the temporary variable
+                        }
                     }
                 })
             $timer.Start()
