@@ -780,7 +780,18 @@ function Show-PermissionDialog {
             <TextBlock Text="$Label" FontWeight="Bold" Grid.Row="2" Margin="0,0,0,5"/>
             <ComboBox Name="CmbRights" Grid.Row="3" Height="25" Margin="$rightsMargin"/>
 
-            <TextBlock Name="LblAuto" Visibility="$autoVisibility" Text="Automapping Options:" FontWeight="Bold" Grid.Row="4" Margin="0,0,0,5"/>
+            <StackPanel Name="LblAuto" Visibility="$autoVisibility" Orientation="Horizontal" Grid.Row="4" Margin="0,0,0,5">
+                <TextBlock Text="Automapping Options:" FontWeight="Bold" VerticalAlignment="Center"/>
+                <Border Margin="6,0,0,0" Width="14" Height="14" CornerRadius="7" Background="#007ACC" VerticalAlignment="Center">
+                    <TextBlock Text="?" Foreground="White" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Cursor="Help">
+                        <TextBlock.ToolTip>
+                            <ToolTip Background="#2D2D30" Foreground="#E0E0E0" BorderBrush="#3F3F46" Padding="8">
+                                <TextBlock Text="Exchange does not return the current state of the Automapping property. 'Enable' is selected by default for FullAccess assignments." TextWrapping="Wrap" MaxWidth="200"/>
+                            </ToolTip>
+                        </TextBlock.ToolTip>
+                    </TextBlock>
+                </Border>
+            </StackPanel>
             <StackPanel Name="PanelAuto" Visibility="$autoVisibility" Grid.Row="5" Orientation="Horizontal" Margin="0,0,0,15">
                 <CheckBox Name="ChkEnableAuto" Content="Enable" Foreground="#E0E0E0" Margin="0,0,25,0" Cursor="Hand"/>
                 <CheckBox Name="ChkDisableAuto" Content="Disable" Foreground="#E0E0E0" Cursor="Hand"/>
