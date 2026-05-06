@@ -670,8 +670,8 @@ function Show-PermissionDialog {
             <TextBlock Text="$Label" FontWeight="Bold" Grid.Row="2" Margin="0,0,0,5"/>
             <ComboBox Name="CmbRights" Grid.Row="3" Height="25" Margin="$rightsMargin"/>
 
-            <TextBlock Visibility="$autoVisibility" Text="Automapping Options:" FontWeight="Bold" Grid.Row="4" Margin="0,0,0,5"/>
-            <StackPanel Visibility="$autoVisibility" Grid.Row="5" Orientation="Horizontal" Margin="0,0,0,15">
+            <TextBlock Name="LblAuto" Visibility="$autoVisibility" Text="Automapping Options:" FontWeight="Bold" Grid.Row="4" Margin="0,0,0,5"/>
+            <StackPanel Name="PanelAuto" Visibility="$autoVisibility" Grid.Row="5" Orientation="Horizontal" Margin="0,0,0,15">
                 <CheckBox Name="ChkEnableAuto" Content="Enable" Foreground="#E0E0E0" Margin="0,0,25,0" Cursor="Hand"/>
                 <CheckBox Name="ChkDisableAuto" Content="Disable" Foreground="#E0E0E0" Cursor="Hand"/>
             </StackPanel>
@@ -707,13 +707,15 @@ function Show-PermissionDialog {
     $cRights = $diag.FindName("CmbRights")
     $cSendRights = $diag.FindName("CmbSendRights")
     $bSave = $diag.FindName("BtnSave")
+    $lblAuto = $diag.FindName("LblAuto")
+    $panelAuto = $diag.FindName("PanelAuto")
     $chkEnable = $diag.FindName("ChkEnableAuto")
     $chkDisable = $diag.FindName("ChkDisableAuto")
     $bCancel = $diag.FindName("BtnCancel")
 
     # Populate User List and add filtering (search-as-you-type)
     $userCollection = [System.Collections.ObjectModel.ObservableCollection[string]]::new()
-    if ($UserList) { $UserList | ForEach-Object { $userCollection.Add($_) } }
+    if ($UserList) { $UserList | Sort-Object | ForEach-Object { $userCollection.Add($_) } }
     $cUser.ItemsSource = $userCollection
 
     $cUser.Add_KeyUp({
@@ -738,10 +740,21 @@ function Show-PermissionDialog {
     # Dynamically enable/disable Automapping UI based on selected Access Rights
     $updateAutoUI = {
         if ($ShowAutomapping) {
-            $isNone = ($cRights.SelectedItem -eq "None" -or [string]::IsNullOrWhiteSpace($cRights.SelectedItem))
-            $chkEnable.IsEnabled = -not $isNone
-            $chkDisable.IsEnabled = -not $isNone
-            if ($isNone) { $chkEnable.IsChecked = $false; $chkDisable.IsChecked = $false }
+            $isFullAccess = ($cRights.SelectedItem -eq "FullAccess")
+            $vis = if ($isFullAccess) { "Visible" } else { "Collapsed" }
+            $lblAuto.Visibility = $vis
+            $panelAuto.Visibility = $vis
+
+            if ($isFullAccess) {
+                # Default to Enable (True) if no choice has been made yet
+                if (-not $chkEnable.IsChecked -and -not $chkDisable.IsChecked) {
+                    $chkEnable.IsChecked = $true
+                }
+            }
+            if (-not $isFullAccess) {
+                $chkEnable.IsChecked = $false
+                $chkDisable.IsChecked = $false
+            }
         }
     }
     $cRights.Add_SelectionChanged($updateAutoUI)
@@ -778,10 +791,9 @@ function Show-PermissionDialog {
 
                     # Mandatory Automapping only if Access Rights changed from None (or initial empty) to something else,
                     # OR if they were explicitly changed during an edit.
-                    if ($ShowAutomapping -and -not $isNone) {
-                        if ($rightsChanged -and -not $autoSelected -and $action -ne "Add") {
-                            # Only for edit, not add
-                            Show-MessageDialog -Title "Automapping Required" -Message "Access Rights were changed. Please select an Automapping option." | Out-Null
+                    if ($ShowAutomapping -and $selectedRights -eq "FullAccess") {
+                        if (-not $autoSelected) {
+                            Show-MessageDialog -Title "Automapping Required" -Message "FullAccess rights require automapping flag be set. Please select Enable or Disable." | Out-Null
                             return
                         }
                     }
@@ -1076,9 +1088,18 @@ function Update-PermissionAsync {
                         }
                         
                         if ($data.Rights -and $data.Rights -ne "None") {
-                            # Use provided selection, otherwise default to True for new assignments
-                            $autoVal = if ($data.HasAutoSelection) { $data.Automapping } else { $true }
-                            Add-MailboxPermission -Identity $mbx -User $data.User -AccessRights @($data.Rights) -InheritanceType All -AutoMapping $autoVal -ErrorAction Stop
+                            $mbxParams = @{
+                                Identity        = $mbx
+                                User            = $data.User
+                                AccessRights    = @($data.Rights)
+                                InheritanceType = "All"
+                                ErrorAction     = "Stop"
+                            }
+                            # Automapping is only valid and allowed for FullAccess
+                            if ($data.Rights -eq "FullAccess") {
+                                $mbxParams["AutoMapping"] = if ($data.HasAutoSelection) { $data.Automapping } else { $true }
+                            }
+                            Add-MailboxPermission @mbxParams
                         }
                     }
                 }
