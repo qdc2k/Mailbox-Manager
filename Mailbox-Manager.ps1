@@ -28,10 +28,10 @@ if ($consoleHandle -ne [IntPtr]::Zero) { [Native.Win32Utils]::ShowWindow($consol
 # ==============================================================================
 # 1. PREREQUISITE CHECKS & ADMIN ELEVATION
 # ==============================================================================
-$appDataPath = "$env:APPDATA\Mailbox-Manager"
-$iconPath = Join-Path $appDataPath "Mailbox_Manager.ico"
-$settingsFile = "$appDataPath\settings.json"
-$markerFile = "$appDataPath\ExchangeModuleOk.txt"
+$appDataPath = Join-Path $env:APPDATA "Mailbox-Manager"
+$iconPath = Join-Path $PSScriptRoot "Mailbox_Manager.ico"
+$settingsFile = Join-Path $appDataPath "settings.json"
+$markerFile = Join-Path $appDataPath "ExchangeModuleOk.txt"
 
 if (-not (Test-Path $markerFile)) {
     Write-Host "Checking prerequisites..."
@@ -65,7 +65,7 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
 [xml]$XAML = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Exchange Mailbox Manager" Height="775" Width="1188" MinWidth="1100"
+        Title="Mailbox Manager" Height="775" Width="1188" MinWidth="1100"
         Background="#1E1E1E" Foreground="#E0E0E0" WindowStartupLocation="CenterScreen">
     <Window.Resources>
         <!-- Tooltip for Calendar Roles -->
@@ -519,9 +519,17 @@ Add-Type -AssemblyName WindowsBase
 function Set-WindowDarkMode {
     param($win)
     if (Test-Path $iconPath) {
-        try { $win.Icon = [System.Windows.Media.Imaging.BitmapFrame]::Create((New-Object Uri $iconPath)) } catch {}
+        # Check if the icon file actually exists
+        try {
+            $win.Icon = [System.Windows.Media.Imaging.BitmapFrame]::Create((New-Object System.Uri($iconPath, [System.UriKind]::Absolute)))
+        }
+        catch {
+            Write-Host "[$(Get-Date -f HH:mm:ss)] ERROR: Failed to load icon from $iconPath. Error: $($_.Exception.Message)" -ForegroundColor Red
+        }
     }
-
+    else {
+        Write-Host "[$(Get-Date -f HH:mm:ss)] WARNING: Icon file not found at $iconPath. Using default icon." -ForegroundColor Yellow
+    }
     $win.Add_SourceInitialized({
             $h = (New-Object System.Windows.Interop.WindowInteropHelper($this)).Handle
             [int]$v = 1
