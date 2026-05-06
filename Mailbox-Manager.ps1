@@ -2018,6 +2018,17 @@ $ListMailboxes.Add_SelectionChanged({
 # ==============================================================================
 # 7. START THE APPLICATION
 # ==============================================================================
+# Pre-load Exchange module right after GUI is loaded to speed up the first connection
+$Window.Add_Loaded({
+        $Warmup = [powershell]::Create().AddScript({
+                Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
+                Write-Host "[$(Get-Date -f HH:mm:ss)] Exchange Online module pre-loaded in background." -ForegroundColor Gray
+            })
+        $Warmup.RunspacePool = $Pool
+        # Use BeginInvoke to ensure the UI thread remains responsive while the module loads
+        $Warmup.BeginInvoke() | Out-Null
+    })
+
 # Save everything when the user closes the app
 $Window.Add_Closing({ Save-ManagerSettings })
 
