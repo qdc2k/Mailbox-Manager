@@ -212,27 +212,31 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
         <Grid Grid.Row="0" Margin="0,0,0,15">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             
             <Button Name="BtnConnect" Grid.Column="0" Content="Connect" Width="140" Height="35" Background="#007ACC" Foreground="White" BorderThickness="0" Cursor="Hand" FontWeight="Bold" Margin="0,0,15,0" VerticalAlignment="Top"/>
-            <CheckBox Name="ChkFetchAllMailboxes" Grid.Column="1" Content="Always get all mailboxes" VerticalAlignment="Center" Foreground="#E0E0E0" Margin="0,0,20,0" ToolTip="If unchecked, you can fetch specific mailboxes by UPN"/>
 
-            <Border Grid.Column="2" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="3" Padding="12,2">
+            <Border Grid.Column="1" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="3" Padding="12,2" HorizontalAlignment="Left">
                 <!-- Optional Connection Settings Group -->
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="Optional connection settings:" Foreground="#007ACC" FontWeight="Bold" FontSize="11" VerticalAlignment="Center" Margin="0,0,15,0"/>
+                    <CheckBox Name="ChkFetchAllMailboxes" Content="Always get all mailboxes" VerticalAlignment="Center" Foreground="#E0E0E0" Margin="0,0,15,0" ToolTip="If unchecked, you can fetch specific mailboxes by UPN"/>
+                    <Rectangle Width="1" Fill="#3F3F46" Margin="0,7,15,7"/>
                     <CheckBox Name="ChkDelegated" Content="Delegated Org:" VerticalAlignment="Center" Foreground="#E0E0E0" Margin="0,0,5,0"/>
                     <TextBox Name="TxtDelegatedOrg" Width="130" Height="24" Background="#2D2D30" Foreground="White" BorderBrush="#3F3F46" VerticalContentAlignment="Center" Padding="5,0" IsEnabled="False" Margin="0,0,15,0" ToolTip="e.g. contoso.onmicrosoft.com"/>
+                    <Rectangle Width="1" Fill="#3F3F46" Margin="0,7,10,7"/>
                     <StackPanel Name="AdminUserPanel" Orientation="Horizontal" VerticalAlignment="Center">
                         <TextBlock Text="Admin-User:" VerticalAlignment="Center" Foreground="#E0E0E0" Margin="0,0,5,0"/>
                         <TextBox Name="TxtUserUPN" Width="180" Height="24" Background="#2D2D30" Foreground="White" BorderBrush="#3F3F46" VerticalContentAlignment="Center" Padding="5,0" Margin="0,0,5,0" ToolTip="Your admin email address"/>
                     </StackPanel>
                     <!-- Explanation Text -->
-                    <TextBlock Name="DelegatedWarning" Text="(Using Delegated Org doesn't allow pre-defined admin credentials)" Foreground="#AAAAAA" FontStyle="Italic" FontSize="10" VerticalAlignment="Center" Margin="10,0,0,0" Visibility="Collapsed"/>
+                    <TextBlock Name="DelegatedWarning" Text="(Delegated access prevents pre-defined admin credentials)" Foreground="#AAAAAA" FontStyle="Italic" FontSize="10" VerticalAlignment="Center" Margin="0,0,0,0" Visibility="Collapsed" ToolTip="Delegated access prevents using pre-defined administrator credentials."/>
                 </StackPanel>
             </Border>
+
+            <Button Name="BtnReset" Grid.Column="2" Content="Restore View" Padding="8,0" Height="24" Background="#3E3E42" Foreground="#E0E0E0" BorderThickness="0" Margin="15,0,0,0" VerticalAlignment="Center" Cursor="Hand" FontSize="11" FontWeight="SemiBold"/>
         </Grid>
 
         <!-- Main Content Area -->
@@ -331,6 +335,17 @@ Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
                                 </GroupStyle>
                             </ListView.GroupStyle>
                         </ListView>
+                        <!-- Cooldown Overlay -->
+                        <Border Name="CooldownOverlay" Background="#2D2D30" BorderBrush="#FFB13B" BorderThickness="1" CornerRadius="3" Visibility="Collapsed"
+                                HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                Margin="0">
+                            <TextBlock Name="CooldownMessage" 
+                                       Text="COOLDOWN`n`nPlease wait 2 seconds between requests" 
+                                       Foreground="#FFB13B" FontWeight="Bold" FontSize="13" 
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" 
+                                       TextAlignment="Center" TextWrapping="Wrap"/>
+                        </Border>
+
                         <TextBlock Name="StatusMailboxes" Text="" Foreground="#AAAAAA" FontStyle="Italic" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="14" IsHitTestVisible="False"/>
                     </Grid>
                 </Grid>
@@ -465,6 +480,7 @@ $Window = [Windows.Markup.XamlReader]::Load($reader)
 
 # Map XAML Elements to Variables
 $BtnConnect = $Window.FindName("BtnConnect")
+$BtnReset = $Window.FindName("BtnReset")
 $ChkDelegated = $Window.FindName("ChkDelegated")
 $ChkFetchAllMailboxes = $Window.FindName("ChkFetchAllMailboxes")
 $TxtDelegatedOrg = $Window.FindName("TxtDelegatedOrg")
@@ -491,6 +507,8 @@ $BtnRemoveCal = $Window.FindName("BtnRemoveCal")
 $StatusMbx = $Window.FindName("StatusMbx")
 $StatusCal = $Window.FindName("StatusCal")
 $StatusMailboxes = $Window.FindName("StatusMailboxes")
+$CooldownOverlay = $Window.FindName("CooldownOverlay") # New
+$CooldownMessage = $Window.FindName("CooldownMessage") # New
 
 # --- Helper: Save Settings ---
 function Save-ManagerSettings {
@@ -499,6 +517,15 @@ function Save-ManagerSettings {
         Org          = $TxtDelegatedOrg.Text
         UserUPN      = $TxtUserUPN.Text
         FetchAll     = [bool]$ChkFetchAllMailboxes.IsChecked
+        # Window State
+        WinWidth     = $Window.Width
+        WinHeight    = $Window.Height
+        WinTop       = $Window.Top
+        WinLeft      = $Window.Left
+        # Column Widths
+        ColMailbox   = @($ListMailboxes.View.Columns | ForEach-Object { $_.ActualWidth })
+        ColMbxPerms  = @($GridMbxPerms.View.Columns | ForEach-Object { $_.ActualWidth })
+        ColCalPerms  = @($GridCalPerms.View.Columns | ForEach-Object { $_.ActualWidth })
     }
     $settings | ConvertTo-Json | Set-Content $settingsFile -ErrorAction SilentlyContinue
 }
@@ -517,11 +544,15 @@ $SyncHash.ProgressMailboxesText = $ProgressMailboxesText
 $SyncHash.StatusMbx = $StatusMbx
 $SyncHash.StatusCal = $StatusCal
 $SyncHash.StatusMailboxes = $StatusMailboxes
+$SyncHash.CooldownOverlay = $CooldownOverlay # New
+$SyncHash.CooldownMessage = $CooldownMessage # New
 $SyncHash.GridMbxPerms = $GridMbxPerms
 $SyncHash.GridCalPerms = $GridCalPerms
 $SyncHash.AllMailboxes = [System.Collections.ObjectModel.ObservableCollection[object]]::new()
 $SyncHash.FetchedUPNs = [System.Collections.ObjectModel.ObservableCollection[string]]::new()
 $SyncHash.AddressCache = [System.Collections.Generic.List[string]]::new()
+$SyncHash.LastFetchId = 0 # Add this line to track the latest fetch request
+$SyncHash.LastManualFetchTime = [datetime]::MinValue
 
 # --- Load Saved Settings ---
 if (Test-Path $settingsFile) {
@@ -532,6 +563,19 @@ if (Test-Path $settingsFile) {
         $TxtUserUPN.Text = $settings.UserUPN
         $ChkFetchAllMailboxes.IsChecked = if ($null -eq $settings.FetchAll) { $true } else { $settings.FetchAll }
         if ($settings.UseDelegated) { $TxtDelegatedOrg.IsEnabled = $true }
+        
+        # Restore Window Position/Size
+        if ($settings.WinWidth) { $Window.Width = $settings.WinWidth }
+        if ($settings.WinHeight) { $Window.Height = $settings.WinHeight }
+        if ($settings.WinTop) { $Window.Top = $settings.WinTop }
+        if ($settings.WinLeft) { $Window.Left = $settings.WinLeft }
+
+        # Restore Column Widths (Apply after UI is loaded)
+        $Window.Add_SourceInitialized({
+                if ($settings.ColMailbox) { for ($i = 0; $i -lt $settings.ColMailbox.Count; $i++) { try { $ListMailboxes.View.Columns[$i].Width = $settings.ColMailbox[$i] } catch {} } }
+                if ($settings.ColMbxPerms) { for ($i = 0; $i -lt $settings.ColMbxPerms.Count; $i++) { try { $GridMbxPerms.View.Columns[$i].Width = $settings.ColMbxPerms[$i] } catch {} } }
+                if ($settings.ColCalPerms) { for ($i = 0; $i -lt $settings.ColCalPerms.Count; $i++) { try { $GridCalPerms.View.Columns[$i].Width = $settings.ColCalPerms[$i] } catch {} } }
+            })
     }
     catch {
         Write-Host "Failed to load settings: $($_.Exception.Message)" -ForegroundColor Red
@@ -781,7 +825,7 @@ function Show-PermissionDialog {
     $bSave.Add_Click({
             $upn = $cUser.Text.Trim()
             # Validation: Allow Default, Anonymous, Standard (German), or valid email format
-            if ($upn -eq "Default" -or $upn -eq "Anonymous" -or $upn -eq "Standard" -or $upn -match '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$') {
+            if (-not $UserEditable -or $upn -eq "Default" -or $upn -eq "Anonymous" -or $upn -eq "Standard" -or $upn -match '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$') {
                 if ($cRights.SelectedItem) {
                     $selectedRights = $cRights.SelectedItem
                     $selectedSend = if ($ShowSendRights) { $cSendRights.SelectedItem } else { "None" }
@@ -908,24 +952,59 @@ $SyncHash.GetPermissionsAsync = {
     param(
         [string]$Mailbox,
         [bool]$FetchMbx = $true,
-        [bool]$FetchCal = $true
+        [bool]$FetchCal = $true,
+        [bool]$Manual = $false
     )
-    
+
+    # Cooldown Logic: Prevent manual spamming (2 second throttle)
+    if ($Manual) {
+        $now = Get-Date
+        if (($now - $SyncHash.LastManualFetchTime).TotalSeconds -lt 2) {
+            # Visual feedback: Clear permissions and hide the mailbox list
+            $SyncHash.GridMbxPerms.Items.Clear()
+            $SyncHash.GridCalPerms.Items.Clear()
+            $SyncHash.ListMailboxes.Visibility = [System.Windows.Visibility]::Hidden
+            $SyncHash.StatusMbx.Text = ""
+            $SyncHash.StatusCal.Text = ""
+
+            # Display the cooldown overlay
+            $SyncHash.CooldownOverlay.Visibility = [System.Windows.Visibility]::Visible
+            $SyncHash.CooldownMessage.Text = "COOLDOWN`n`nPlease wait 2 seconds between requests"
+            
+            $timer = New-Object System.Windows.Threading.DispatcherTimer
+            $timer.Interval = [TimeSpan]::FromSeconds(1.5)
+            $timer.Add_Tick({
+                    $this.Stop()
+                    # Only hide the overlay if it's currently visible (i.e., still in cooldown state)
+                    if ($SyncHash.CooldownOverlay.Visibility -eq [System.Windows.Visibility]::Visible) {
+                        $SyncHash.CooldownOverlay.Visibility = [System.Windows.Visibility]::Collapsed
+                        $SyncHash.ListMailboxes.Visibility = [System.Windows.Visibility]::Visible
+                    }
+                })
+            $timer.Start()
+            return
+        }
+        $SyncHash.LastManualFetchTime = $now
+    }
+
+    $SyncHash.LastFetchId++
+    $currentFetchId = $SyncHash.LastFetchId
+
     # UI Preparation on the main thread
     $SyncHash.CurrentTargetMbx = $Mailbox
     $SyncHash.SelectedMbx = $Mailbox
 
-    if ($FetchMbx) {
+    if ($FetchMbx) { 
+        $SyncHash.StatusMbx.Text = "(Fetching...)" 
         $SyncHash.GridMbxPerms.Items.Clear()
-        $SyncHash.StatusMbx.Text = "(Fetching...)"
     }
-    if ($FetchCal) {
+    if ($FetchCal) { 
+        $SyncHash.StatusCal.Text = "(Fetching...)" 
         $SyncHash.GridCalPerms.Items.Clear()
-        $SyncHash.StatusCal.Text = "(Fetching...)"
     }
 
     $PsPerms = [powershell]::Create().AddScript({
-            param($mbx, $SyncHash, $doMbx, $doCal)
+            param($mbx, $SyncHash, $doMbx, $doCal, $fetchId)
             Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
             
             try {
@@ -937,26 +1016,17 @@ $SyncHash.GetPermissionsAsync = {
 
                     $usersHash = [ordered]@{}
                     
-                    # Helper to normalize identities (resolve SamAccountName/DN/SID to UPN)
-                    $NormalizeId = {
+                    # Lightweight helper to clean identity strings without external lookups
+                    $GetId = {
                         param($id, $targetMbx)
-                        if ($null -eq $id) { return $null }
+                        if ($null -eq $id -or [string]::IsNullOrWhiteSpace($id)) { return $null }
                         $s = $id.ToString()
                         if ($s -match "SELF") { return $targetMbx }
-                        $clean = $s.Split(':')[-1]
-                        # If it's already a UPN, return it immediately
-                        if ($clean -match '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$') { return $clean }
-                        # Try to resolve non-UPN identities to PrimarySmtpAddress for consolidation
-                        try {
-                            $rec = Get-Recipient -Identity $clean -ErrorAction SilentlyContinue | Select-Object -First 1
-                            if ($rec.PrimarySmtpAddress) { return $rec.PrimarySmtpAddress.ToString() }
-                        }
-                        catch {}
-                        return $clean
+                        return $s.Split(':')[-1]
                     }
                     
                     foreach ($p in $mbxPerms) {
-                        $userDisp = &$NormalizeId $p.User $mbx
+                        $userDisp = &$GetId $p.User $mbx
                         if (-not $usersHash.Contains($userDisp)) {
                             $usersHash[$userDisp] = @{ User = $userDisp; AccessRights = [System.Collections.Generic.List[string]]::new(); SendRights = "None" }
                         }
@@ -964,7 +1034,7 @@ $SyncHash.GetPermissionsAsync = {
                     }
                     
                     foreach ($p in $recPerms) {
-                        $userDisp = &$NormalizeId $p.Trustee $mbx
+                        $userDisp = &$GetId $p.Trustee $mbx
                         if (-not $usersHash.Contains($userDisp)) {
                             $usersHash[$userDisp] = @{ User = $userDisp; AccessRights = [System.Collections.Generic.List[string]]::new(); SendRights = "SendAs" }
                         }
@@ -974,7 +1044,7 @@ $SyncHash.GetPermissionsAsync = {
                     }
                     
                     foreach ($u in $mbxObj.GrantSendOnBehalfTo) {
-                        $userDisp = &$NormalizeId $u $mbx
+                        $userDisp = &$GetId $u $mbx
                         if (-not $usersHash.Contains($userDisp)) {
                             $usersHash[$userDisp] = @{ User = $userDisp; AccessRights = [System.Collections.Generic.List[string]]::new(); SendRights = "SendOnBehalf" }
                         }
@@ -985,8 +1055,9 @@ $SyncHash.GetPermissionsAsync = {
 
                     $mCount = $usersHash.Count
                     $SyncHash.Window.Dispatcher.Invoke({
-                            if ($SyncHash.CurrentTargetMbx -ne $mbx) { return }
+                            if ($fetchId -ne $SyncHash.LastFetchId) { return } # Only update if this is the latest fetch request
                             Write-Host "[$(Get-Date -f HH:mm:ss)] Loaded $mCount users with mailbox/send permissions." -ForegroundColor Gray
+                            $SyncHash.GridMbxPerms.Items.Clear()
                             foreach ($entry in $usersHash.Values) {
                                 $rightsStr = ($entry.AccessRights | Select-Object -Unique | Sort-Object) -join ", "
                                 if (-not $rightsStr) { $rightsStr = "None" }
@@ -1015,10 +1086,10 @@ $SyncHash.GetPermissionsAsync = {
                             $calPath = "$($mbx):\$($calFolder.Name)"
                             $calPerms = Get-MailboxFolderPermission -Identity $calPath -ErrorAction Stop | Where-Object { $_.User -notlike "NT AUTHORITY\*" }
                             $cCount = @($calPerms).Count
-                    
                             $SyncHash.Window.Dispatcher.Invoke({
-                                    if ($SyncHash.CurrentTargetMbx -ne $mbx) { return }
+                                    if ($fetchId -ne $SyncHash.LastFetchId) { return } # Only update if this is the latest fetch request
                                     Write-Host "[$(Get-Date -f HH:mm:ss)] Found calendar folder: $($calFolder.Name). Loaded $cCount permissions." -ForegroundColor Gray
+                                    $SyncHash.GridCalPerms.Items.Clear()
                                     foreach ($p in $calPerms) {
                                         $userDisp = if ($p.User.UserPrincipalName) { $p.User.UserPrincipalName }
                                         elseif ($p.User.ToString() -match "Default") { "Default" }
@@ -1042,6 +1113,7 @@ $SyncHash.GetPermissionsAsync = {
             catch {
                 $err = $_.Exception.Message
                 if ($err -match "is closed|broken pipe|network connection") {
+                    if ($fetchId -ne $SyncHash.LastFetchId) { return } # Only show error if this is the latest fetch
                     $SyncHash.Window.Dispatcher.Invoke({
                             [System.Windows.MessageBox]::Show("Exchange Online connection lost (Closed/Broken). Please reconnect.")
                             $SyncHash.StatusMbx.Text = "(Error)"
@@ -1049,6 +1121,7 @@ $SyncHash.GetPermissionsAsync = {
                         })
                 }
                 else {
+                    if ($fetchId -ne $SyncHash.LastFetchId) { return } # Only show error if this is the latest fetch
                     $SyncHash.Window.Dispatcher.Invoke({ 
                             Write-Host "[$(Get-Date -f HH:mm:ss)] ERROR fetching perms for $mbx : $err" -ForegroundColor Red 
                             if ($doMbx) { $SyncHash.StatusMbx.Text = "(Error)" }
@@ -1056,8 +1129,8 @@ $SyncHash.GetPermissionsAsync = {
                         })
                 }
             }
-        }).AddArgument($Mailbox).AddArgument($SyncHash).AddArgument($FetchMbx).AddArgument($FetchCal)
-    
+        }).AddArgument($Mailbox).AddArgument($SyncHash).AddArgument($FetchMbx).AddArgument($FetchCal).AddArgument($currentFetchId)
+
     $PsPerms.RunspacePool = $Pool
     $PsPerms.BeginInvoke() | Out-Null
 }
@@ -1069,7 +1142,7 @@ function Update-PermissionAsync {
     if (-not $mbx) { return }
 
     # Update UI to show we are working
-    if ($Type -eq "Mailbox") { $SyncHash.StatusMbx.Text = "(Saving...)" } else { $SyncHash.StatusCal.Text = "(Saving...)" }
+    if ($Type -eq "Mailbox") { $SyncHash.StatusMbx.Text = "(Processing...)" } else { $SyncHash.StatusCal.Text = "(Processing...)" }
 
     $PowerShell = [powershell]::Create().AddScript({
             param($mbx, $type, $action, $data, $SyncHash, $oldRights, $oldSendRights)
@@ -1134,14 +1207,15 @@ function Update-PermissionAsync {
                     }
                 }
 
-                # Show waiting status
-                $SyncHash.Window.Dispatcher.Invoke({
-                        if ($type -eq "Mailbox") { $SyncHash.StatusMbx.Text = "(Waiting for Sync...)" }
-                        else { $SyncHash.StatusCal.Text = "(Waiting for Sync...)" }
-                    })
-
-                # Wait for Exchange propagation
-                Start-Sleep -Seconds 5
+                # Wait for Exchange propagation with countdown (the "Safety Delay")
+                for ($i = 2; $i -gt 0; $i--) {
+                    $SyncHash.Window.Dispatcher.Invoke({
+                            $txt = "(Waiting for Exchange propagation: ${i}s...)"
+                            if ($type -eq "Mailbox") { $SyncHash.StatusMbx.Text = $txt }
+                            else { $SyncHash.StatusCal.Text = $txt }
+                        })
+                    Start-Sleep -Seconds 1
+                }
 
                 # Success: Trigger UI refresh on the main thread
                 $SyncHash.Window.Dispatcher.Invoke([Action[string, string]] {
@@ -1188,7 +1262,7 @@ function Remove-PermissionAsync {
     if (-not $mbx) { return }
 
     # Update UI to show we are working
-    if ($Type -eq "Mailbox") { $SyncHash.StatusMbx.Text = "(Removing...)" } else { $SyncHash.StatusCal.Text = "(Removing...)" }
+    if ($Type -eq "Mailbox") { $SyncHash.StatusMbx.Text = "(Processing...)" } else { $SyncHash.StatusCal.Text = "(Processing...)" }
 
     $PowerShell = [powershell]::Create().AddScript({
             param($mbx, $type, $user, $accessRights, $SyncHash)
@@ -1214,14 +1288,15 @@ function Remove-PermissionAsync {
                     Remove-MailboxFolderPermission -Identity $path -User $user -Confirm:$false -ErrorAction Stop
                 }
 
-                # Show waiting status
-                $SyncHash.Window.Dispatcher.Invoke({
-                        if ($type -eq "Mailbox") { $SyncHash.StatusMbx.Text = "(Waiting for Sync...)" }
-                        else { $SyncHash.StatusCal.Text = "(Waiting for Sync...)" }
-                    })
-
-                # Wait for Exchange propagation
-                Start-Sleep -Seconds 5
+                # Wait for Exchange propagation with countdown (the "Safety Delay")
+                for ($i = 2; $i -gt 0; $i--) {
+                    $SyncHash.Window.Dispatcher.Invoke({
+                            $txt = "(Waiting for Exchange propagation: ${i}s...)"
+                            if ($type -eq "Mailbox") { $SyncHash.StatusMbx.Text = $txt }
+                            else { $SyncHash.StatusCal.Text = $txt }
+                        })
+                    Start-Sleep -Seconds 1
+                }
 
                 # Success: Trigger UI refresh on the main thread
                 $SyncHash.Window.Dispatcher.Invoke([Action[string, string]] {
@@ -1269,20 +1344,18 @@ $BtnAddMbx.Add_Click({
         if ($res) { Update-PermissionAsync -Type "Mailbox" -Action "Add" -Data $res } else { Write-Host "[$(Get-Date -f HH:mm:ss)] Show-PermissionDialog for AddMbx returned null." -ForegroundColor Yellow }
     })
 
-# --- Event: Detect Re-click on already selected Mailbox to refresh ---
-$ListMailboxes.Add_PreviewMouseLeftButtonDown({
+# --- Event: Handle mouse-based selection and re-clicks (avoids drag-spam) ---
+$ListMailboxes.Add_PreviewMouseLeftButtonUp({
         param($s, $e)
         $dep = $e.OriginalSource
         # Walk up the visual tree to find the ListViewItem container
         while ($null -ne $dep -and $dep.GetType().Name -ne "ListViewItem") {
             $dep = [System.Windows.Media.VisualTreeHelper]::GetParent($dep)
         }
-        if ($null -ne $dep -and $dep.IsSelected) {
-            # Item is already selected, so SelectionChanged won't fire. Trigger refresh manually.
-            $selectedItem = $ListMailboxes.SelectedItem
-            if ($null -ne $selectedItem) {
-                & $SyncHash.GetPermissionsAsync -Mailbox $selectedItem.Address -FetchMbx $true -FetchCal $true
-            }
+        # If we released over a valid item, trigger the refresh
+        $selectedItem = $ListMailboxes.SelectedItem
+        if ($null -ne $dep -and $null -ne $selectedItem) {
+            & $SyncHash.GetPermissionsAsync -Mailbox $selectedItem.Address -FetchMbx $true -FetchCal $true -Manual $true
         }
     })
 
@@ -1331,6 +1404,32 @@ $BtnRemoveCal.Add_Click({
             $currentRole = $sel.AccessRights -split "," | Select-Object -First 1 | ForEach-Object { $_.Trim() }
             Remove-PermissionAsync -Type "Calendar" -User $sel.User -AccessRights $currentRole
         }
+    })
+
+# --- Event: Restore Default View ---
+$BtnReset.Add_Click({
+        # Reset Window Geometry to default values
+        $Window.Width = 1188
+        $Window.Height = 775
+        $Window.Left = ([System.Windows.SystemParameters]::PrimaryScreenWidth - 1188) / 2
+        $Window.Top = ([System.Windows.SystemParameters]::PrimaryScreenHeight - 775) / 2
+
+        # Reset Column Widths to original XAML specs
+        if ($ListMailboxes.View.Columns.Count -ge 1) { $ListMailboxes.View.Columns[0].Width = 255 }
+    
+        if ($GridMbxPerms.View.Columns.Count -ge 3) {
+            $GridMbxPerms.View.Columns[0].Width = 278
+            $GridMbxPerms.View.Columns[1].Width = 375
+            $GridMbxPerms.View.Columns[2].Width = 215
+        }
+    
+        if ($GridCalPerms.View.Columns.Count -ge 2) {
+            $GridCalPerms.View.Columns[0].Width = 278
+            $GridCalPerms.View.Columns[1].Width = 190
+        }
+
+        # Save settings immediately so it persists on next launch
+        Save-ManagerSettings
     })
 
 # --- Event: Connectivity & Persistence Hooks ---
@@ -1747,16 +1846,25 @@ $BtnFetchUPN.Add_Click({
 
 # --- Event: Select Mailbox (ASYNC) ---
 $ListMailboxes.Add_SelectionChanged({
+        # Safety check: if the mouse button is pressed, the user is likely dragging/marking.
+        # We skip the fetch here and let PreviewMouseLeftButtonUp handle it when they release.
+        if ([System.Windows.Input.Mouse]::LeftButton -eq [System.Windows.Input.MouseButtonState]::Pressed) { return }
+
         $selectedItem = $ListMailboxes.SelectedItem
         if ($null -eq $selectedItem) { return }
 
         $mbxAddress = $selectedItem.Address
+        # Selection always fetches both. The GetPermissionsAsync function now handles debouncing.
+        # The check for MouseLeftButton being pressed already prevents spamming during drag.
         # Selection always fetches both
-        & $SyncHash.GetPermissionsAsync -Mailbox $mbxAddress -FetchMbx $true -FetchCal $true
+        & $SyncHash.GetPermissionsAsync -Mailbox $mbxAddress -FetchMbx $true -FetchCal $true -Manual $true
     })
 
 # ==============================================================================
 # 7. START THE APPLICATION
 # ==============================================================================
+# Save everything when the user closes the app
+$Window.Add_Closing({ Save-ManagerSettings })
+
 $Window.ShowDialog() | Out-Null
 $Pool.Dispose()
