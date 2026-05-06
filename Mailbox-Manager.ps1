@@ -56,9 +56,6 @@ if (-not (Test-Path $markerFile)) {
     Set-Content -Path $markerFile -Value "Installed and Verified"
 }
 
-# Load the module into the main session
-Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
-
 # ==============================================================================
 # 2. XAML GUI DEFINITION (Modern Dark Theme)
 # ==============================================================================
