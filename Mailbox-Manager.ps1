@@ -15,15 +15,21 @@ if (-not ("Native.Win32Utils" -as [type])) {
     [DllImport("kernel32.dll")]
     public static extern IntPtr GetConsoleWindow();    
     [DllImport("kernel32.dll")] public static extern bool FreeConsole();
+    [DllImport("dwmapi.dll")] public static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)] public static extern int SetCurrentProcessExplicitAppUserModelID(string AppID);
 '@ -Name "Win32Utils" -Namespace "Native" | Out-Null
 }
 $consoleHandle = [Native.Win32Utils]::GetConsoleWindow()
 if ($consoleHandle -ne [IntPtr]::Zero) { [Native.Win32Utils]::ShowWindow($consoleHandle, 0) | Out-Null } # 0 = SW_HIDE
 
+# Set a unique AppUserModelID so the taskbar treats this as a standalone app with its own icon
+[Native.Win32Utils]::SetCurrentProcessExplicitAppUserModelID("Mailbox.Manager.App")
+
 # ==============================================================================
 # 1. PREREQUISITE CHECKS & ADMIN ELEVATION
 # ==============================================================================
 $appDataPath = "$env:APPDATA\Mailbox-Manager"
+$iconPath = Join-Path $appDataPath "Mailbox_Manager.ico"
 $settingsFile = "$appDataPath\settings.json"
 $markerFile = "$appDataPath\ExchangeModuleOk.txt"
 
@@ -509,8 +515,23 @@ Add-Type -AssemblyName PresentationFramework
 Add-Type -AssemblyName PresentationCore
 Add-Type -AssemblyName WindowsBase
 
+# Helper to set window styling: Custom Icon and Immersive Dark Mode
+function Set-WindowDarkMode {
+    param($win)
+    if (Test-Path $iconPath) {
+        try { $win.Icon = [System.Windows.Media.Imaging.BitmapFrame]::Create((New-Object Uri $iconPath)) } catch {}
+    }
+
+    $win.Add_SourceInitialized({
+            $h = (New-Object System.Windows.Interop.WindowInteropHelper($this)).Handle
+            [int]$v = 1
+            [Native.Win32Utils]::DwmSetWindowAttribute($h, 20, [ref]$v, 4)
+        })
+}
+
 $reader = (New-Object System.Xml.XmlNodeReader $XAML)
 $Window = [Windows.Markup.XamlReader]::Load($reader)
+Set-WindowDarkMode -win $Window
 
 # Map XAML Elements to Variables
 $BtnConnect = $Window.FindName("BtnConnect")
@@ -853,6 +874,7 @@ function Show-PermissionDialog {
         $reader = (New-Object System.Xml.XmlNodeReader $DialogXaml)
         $diag = [Windows.Markup.XamlReader]::Load($reader)
         $diag.Owner = $SyncHash.Window
+        Set-WindowDarkMode -win $diag
     }
     catch {
         Show-MessageDialog -Title "XAML Error" -Message "Error loading permission dialog XAML: $($_.Exception.Message)" | Out-Null
@@ -1004,6 +1026,7 @@ function Show-ConfirmDialog {
     $reader = (New-Object System.Xml.XmlNodeReader $ConfirmXaml)
     $diag = [Windows.Markup.XamlReader]::Load($reader)
     $diag.Owner = $SyncHash.Window
+    Set-WindowDarkMode -win $diag
 
     $bConfirm = $diag.FindName("BtnConfirm")
     $bCancel = $diag.FindName("BtnCancel")
@@ -1045,6 +1068,7 @@ function Show-MessageDialog {
         $reader = (New-Object System.Xml.XmlNodeReader $MessageXaml)
         $diag = [Windows.Markup.XamlReader]::Load($reader)
         $diag.Owner = $SyncHash.Window
+        Set-WindowDarkMode -win $diag
     }
     catch {
         # Fallback to default MessageBox if custom dialog fails to load
