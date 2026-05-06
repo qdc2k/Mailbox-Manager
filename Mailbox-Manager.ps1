@@ -6,6 +6,21 @@
 #>
 
 # ==============================================================================
+# 0. HIDE CONSOLE WINDOW (Immediate)
+# ==============================================================================
+if (-not ("Native.Win32Utils" -as [type])) {
+    Add-Type -MemberDefinition @'
+    [DllImport("user32.dll")]
+    public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+    [DllImport("kernel32.dll")]
+    public static extern IntPtr GetConsoleWindow();    
+    [DllImport("kernel32.dll")] public static extern bool FreeConsole();
+'@ -Name "Win32Utils" -Namespace "Native" | Out-Null
+}
+$consoleHandle = [Native.Win32Utils]::GetConsoleWindow()
+if ($consoleHandle -ne [IntPtr]::Zero) { [Native.Win32Utils]::ShowWindow($consoleHandle, 0) | Out-Null } # 0 = SW_HIDE
+
+# ==============================================================================
 # 1. PREREQUISITE CHECKS & ADMIN ELEVATION
 # ==============================================================================
 $appDataPath = "$env:APPDATA\Mailbox-Manager"
@@ -22,7 +37,7 @@ if (-not (Test-Path $markerFile)) {
         
         if (-not $isAdmin) {
             Write-Host "Exchange module not found. Restarting as Administrator to install..." -ForegroundColor Yellow
-            Start-Process powershell.exe -Verb RunAs -ArgumentList "-ExecutionPolicy Bypass -File `"$PSCommandPath`""
+            Start-Process powershell.exe -Verb RunAs -ArgumentList "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$PSCommandPath`""
             exit
         }
         
@@ -1977,5 +1992,6 @@ $ListMailboxes.Add_SelectionChanged({
 # Save everything when the user closes the app
 $Window.Add_Closing({ Save-ManagerSettings })
 
-$Window.ShowDialog() | Out-Null
+$Window.ShowDialog() | Out-Null # This blocks until the WPF window is closed
+[Native.Win32Utils]::FreeConsole() | Out-Null # Free the console window
 $Pool.Dispose()
