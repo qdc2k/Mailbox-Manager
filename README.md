@@ -3,7 +3,7 @@ Features
 
 - Manage mailboxes and their calendar's permissions easily via GUI.
 - Optimized commandlet usage / can handle large datasets smoothly (tested on an environment with 1300 mailboxes).
-- Smart and smoothless search function (will find parts of strings)
+- Smart and fast search function (will find parts of strings)
 - UPN input fields support Autocomplete or choose from dropdown functionality.
 - UI block when spamming get-requests.
 - Support for GDAP / delegated login.
