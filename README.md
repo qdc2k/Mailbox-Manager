@@ -1,5 +1,5 @@
 # Mailbox-Manager
-Features
+## Features
 
 - Manage mailboxes and their calendar's permissions easily via GUI.
 - Optimized commandlet usage / can handle large datasets smoothly (tested on an environment with 1300 mailboxes).
