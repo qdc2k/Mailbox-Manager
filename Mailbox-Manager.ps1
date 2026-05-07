@@ -640,6 +640,10 @@ if (Test-Path $settingsFile) {
         Write-Host "Failed to load settings: $($_.Exception.Message)" -ForegroundColor Red
     }
 }
+else {
+    # First time launch: Enable "Always get all mailboxes" by default as no settings exist in %appdata%
+    $ChkFetchAllMailboxes.IsChecked = $true
+}
 
 # Initialize Grouping and Sorting on the UI Thread (Setup once)
 $view = [System.Windows.Data.CollectionViewSource]::GetDefaultView($SyncHash.AllMailboxes)
