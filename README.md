@@ -3,11 +3,12 @@ Features
 
 - Manage mailboxes and their calendar's permissions easily via GUI.
 - Optimized commandlet usage / can handle large datasets smoothly (tested on an environment with 1300 mailboxes).
-- Dual mode to only get and edit a single mailbox instead of loading all (checkbox: "Always get all mailboxes").
-- UI block when spamming get-requests (picture).
+- Smart and smoothless search function (will find parts of strings)
 - UPN input fields support Autocomplete or choose from dropdown functionality.
+- UI block when spamming get-requests.
 - Support for GDAP / delegated login.
 - Can set pre-defined admin-user.
+- Dual mode to only get and edit a single mailbox instead of loading all (checkbox: "Always get all mailboxes").
 - Exe installer auto-installs required powershell modules.
 
 <img width="1764" height="1154" alt="grafik" src="https://github.com/user-attachments/assets/128ae1f5-79a7-43bf-ae79-d45741da537d" />
